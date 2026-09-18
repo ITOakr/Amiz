@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="_ds/modernist-005285e7-54ad-4e1a-9b4e-ecc55e0b1f62/styles.css">
+<script src="_ds/modernist-005285e7-54ad-4e1a-9b4e-ecc55e0b1f62/_ds_bundle.js"></script>
+<style>body{margin:0;background:#f3f2f2}a{color:#b3230e}a:hover{color:#ec3013}</style>
+</helmet>
+<section id="s5" style="box-sizing:border-box;padding:40px 44px 56px;background:#f3f2f2;color:#201e1d;font-family:'Archivo','Noto Sans JP',system-ui">
+  <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:2px solid rgba(32,30,29,.4);padding-bottom:12px;margin-bottom:12px">
+    <a href="#s5" style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.14em;padding:4px 8px;background:#201e1d;color:#f3f2f2;text-decoration:none">S5</a>
+    <h1 style="margin:0;font-size:24px;line-height:1.1">編集画面 S5 色編集モード</h1>
+    <span style="font:400 12px/1.4 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.62)">糸は生成り（メイン）とこげ茶（鼻）の2色</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font:600 10.5px/1 ui-monospace,Menlo,monospace;padding:3px 7px;background:#201e1d;color:#f3f2f2;align-self:flex-start">S5</span>
+      <dc-import name="EditorScreen" keyboard="grid" view-mode="tabs" current-row="chips" start-mode="color" start-edit-round="1" hint-size="402px,874px"></dc-import>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:44ch">
+      <span style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.14em;text-transform:uppercase;color:#b3230e">試せること</span>
+      <div style="display:flex;flex-direction:column;border-top:2px solid rgba(32,30,29,.4)">
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:64px;font:600 10.5px/1.4 'Archivo','Noto Sans JP',system-ui;color:#b3230e">入り方</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">ツールバー右端の「…」→「色を編集」。モード中は黒い帯が出て、完了ボタンが並びます。</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:64px;font:600 10.5px/1.4 'Archivo','Noto Sans JP',system-ui;color:#b3230e">パレット</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">編み目キーボードが糸パレットに入れ替わります。糸を選び、「＋ 糸を追加」で色を増やせます。</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:64px;font:600 10.5px/1.4 'Archivo','Noto Sans JP',system-ui;color:#b3230e">塗る</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">図の目をタップで1目、そのまま指を動かすと続けて塗れます。</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:64px;font:600 10.5px/1.4 'Archivo','Noto Sans JP',system-ui;color:#b3230e">段ごと</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">目数表タブに切り替えて段をタップすると、その段全体が選んだ糸の色になります。</span>
+        </div>
+      </div>
+      <p style="margin:6px 0 0;font:400 12.5px/1.65 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.7)">モード中は目の追加・削除ができません。戻す／やり直しはツールバーからそのまま使えます。</p>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

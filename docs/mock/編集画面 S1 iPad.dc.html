@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="_ds/modernist-005285e7-54ad-4e1a-9b4e-ecc55e0b1f62/styles.css">
+<script src="_ds/modernist-005285e7-54ad-4e1a-9b4e-ecc55e0b1f62/_ds_bundle.js"></script>
+<style>body{margin:0;background:#f3f2f2}a{color:#b3230e}a:hover{color:#ec3013}</style>
+</helmet>
+<section id="t2" style="box-sizing:border-box;padding:40px 44px 56px;background:#f3f2f2;color:#201e1d;font-family:'Archivo','Noto Sans JP',system-ui">
+  <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:2px solid rgba(32,30,29,.4);padding-bottom:12px;margin-bottom:12px">
+    <a href="#t2" style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.14em;padding:4px 8px;background:#201e1d;color:#f3f2f2;text-decoration:none">2</a>
+    <h1 style="margin:0;font-size:24px;line-height:1.1">編集画面 S1 通常入力中／iPad 横向き</h1>
+    <span style="font:400 12px/1.4 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.62)">1194×834・記号図と目数表を同時表示、キーボードは右サイドレール</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div id="2a" style="display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px">
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <span style="font:600 10.5px/1 ui-monospace,Menlo,monospace;padding:3px 7px;background:#201e1d;color:#f3f2f2">2a</span>
+        <span style="font:400 11.5px/1.3 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.62)">iPhone 版と同じ編集ロジック・同じ記号</span>
+      </div>
+      <dc-import name="EditorScreenPad" keyboard="grid" view-mode="split" current-row="compact" hint-size="1194px,834px"></dc-import>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:40ch">
+      <span style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.14em;text-transform:uppercase;color:#b3230e">iPhone 版との違い</span>
+      <div style="display:flex;flex-direction:column;border-top:2px solid rgba(32,30,29,.4)">
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:52px;font:600 10.5px/1.4 ui-monospace,Menlo,monospace;color:#b3230e">同時表示</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">タブをやめ、左カラムに記号図（上）と目数表（下）を同時に置く。編みながら段の履歴が読める。</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:52px;font:600 10.5px/1.4 ui-monospace,Menlo,monospace;color:#b3230e">レール</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">キーボードは右幅392pxの固定レール。目ボタンは96px角まで大きくし、記号を28pxで描く。</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(32,30,29,.22)">
+          <span style="flex:none;width:52px;font:600 10.5px/1.4 ui-monospace,Menlo,monospace;color:#b3230e">現在の段</span>
+          <span style="font:400 12.5px/1.55 'Archivo','Noto Sans JP',system-ui">「拾った目／前段の目数」はレール最上部に34pxで常駐。前段の次に拾う目は記号自体が赤く太くなる。</span>
+        </div>
+      </div>
+      <p style="margin:6px 0 0;font:400 12.5px/1.65 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.7)">iPhone 版（<a href="編集画面 S1.dc.html">編集画面 S1</a>）と同じ入力ロジックなので、片方で直した挙動はもう片方にも同じ考え方で入れられます。</p>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

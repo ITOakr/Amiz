@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="_ds/modernist-005285e7-54ad-4e1a-9b4e-ecc55e0b1f62/styles.css">
+<script src="_ds/modernist-005285e7-54ad-4e1a-9b4e-ecc55e0b1f62/_ds_bundle.js"></script>
+<style>
+@keyframes stIn{0%{opacity:0;stroke-width:7}60%{opacity:1}100%{opacity:1}}
+@keyframes workIn{0%{opacity:0;stroke-dashoffset:22}100%{opacity:1;stroke-dashoffset:0}}
+@keyframes hlPulse{0%{opacity:.3}45%{opacity:1}100%{opacity:.85}}
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="1194" height="834" hint-size="1194px,834px">
+  <div style="width:1194px;height:834px;box-sizing:border-box;padding-top:34px;display:flex;flex-direction:column;background:#f3f2f2;color:#201e1d;position:relative;overflow:hidden;font-family:'Archivo','Noto Sans JP',system-ui">
+
+    <div style="display:flex;align-items:center;gap:8px;padding:2px 10px 8px;border-bottom:2px solid rgba(32,30,29,.4);flex:none">
+      <button style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:0;cursor:pointer;padding:0">
+        <svg width="11" height="18" viewBox="0 0 11 18" fill="none"><path d="M9 1L2 9l7 8" stroke="#201e1d" stroke-width="2.2" stroke-linecap="round"></path></svg>
+      </button>
+      <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+        <span style="font:800 16px/1.1 'Archivo','Noto Sans JP',system-ui;white-space:nowrap">くまの頭</span>
+        <span style="font:500 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.1em;color:rgba(32,30,29,.55)">輪編み・わの作り目</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <button onClick="{{undo}}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:1.5px solid {{undoBd}};cursor:pointer;padding:0;opacity:{{undoOp}}">
+          <svg width="19" height="17" viewBox="0 0 19 17" fill="none"><path d="M6 2L2 6l4 4" stroke="#201e1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M2 6h8a6 6 0 010 12H6" stroke="#201e1d" stroke-width="2" stroke-linecap="round"></path></svg>
+        </button>
+        <button onClick="{{redo}}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:1.5px solid {{redoBd}};cursor:pointer;padding:0;opacity:{{redoOp}}">
+          <svg width="19" height="17" viewBox="0 0 19 17" fill="none"><path d="M13 2l4 4-4 4" stroke="#201e1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 6H9a6 6 0 000 12h4" stroke="#201e1d" stroke-width="2" stroke-linecap="round"></path></svg>
+        </button>
+        <button onClick="{{openYarn}}" style="height:40px;display:flex;align-items:center;gap:6px;padding:0 8px;background:none;border:1.5px solid rgba(32,30,29,.45);cursor:pointer">
+          <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #201e1d;background:{{yarnColor}}"></span>
+          <span style="font:600 11px/1 'Archivo','Noto Sans JP',system-ui">{{yarnName}}</span>
+        </button>
+        <button onClick="{{toggleMenu}}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:0;cursor:pointer;padding:0">
+          <svg width="20" height="6" viewBox="0 0 20 6"><circle cx="3" cy="3" r="2.4" fill="#201e1d"></circle><circle cx="10" cy="3" r="2.4" fill="#201e1d"></circle><circle cx="17" cy="3" r="2.4" fill="#201e1d"></circle></svg>
+        </button>
+      </div>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex;flex-direction:row">
+    <div style="flex:1;min-width:0;min-height:0;display:flex;flex-direction:column">
+      <sc-if value="{{tabsOn}}" hint-placeholder-val="{{true}}">
+        <div style="display:flex;flex:none;border-bottom:1px solid rgba(32,30,29,.25)">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+            <button onClick="{{t.press}}" style="flex:1;padding:9px 0 8px;font:600 12.5px/1 'Archivo','Noto Sans JP',system-ui;background:{{t.bg}};color:{{t.fg}};border:0;border-bottom:3px solid {{t.bd}};cursor:pointer">{{t.name}}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{chartOn}}" hint-placeholder-val="{{true}}">
+        <div style="flex:{{chartFlex}};min-height:0;position:relative;background:#f3f2f2;overflow:hidden">
+          <svg viewBox="-215 -220 430 430" style="width:100%;height:100%;display:block;touch-action:none;cursor:grab" onPointerDown="{{panDown}}" onPointerMove="{{panMove}}" onPointerUp="{{panUp}}" onPointerLeave="{{panUp}}" onWheel="{{wheel}}">
+            <g transform="{{panT}}">
+              <sc-for list="{{guides}}" as="g" hint-placeholder-count="4">
+                <circle cx="0" cy="0" r="{{g.r}}" fill="none" stroke="rgba(32,30,29,0.1)" stroke-width="1"></circle>
+              </sc-for>
+              <circle cx="0" cy="0" r="12" fill="none" stroke="rgba(32,30,29,0.5)" stroke-width="2"></circle>
+              <sc-for list="{{works}}" as="w" hint-placeholder-count="0">
+                <path d="{{w.d}}" fill="none" stroke="#ec3013" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="22" style="animation:workIn .4s ease-out"></path>
+              </sc-for>
+              <sc-for list="{{joins}}" as="j" hint-placeholder-count="0">
+                <path d="{{j.d}}" fill="none" stroke="#201e1d" stroke-width="2.2" stroke-linecap="round" opacity="0.8"></path>
+              </sc-for>
+              <sc-for list="{{syms}}" as="s" hint-placeholder-count="12">
+                <path d="{{s.d}}" transform="{{s.t}}" fill="{{s.fill}}" stroke="{{s.color}}" stroke-width="{{s.ow}}" stroke-linecap="round" style="{{s.anim}}"></path>
+              </sc-for>
+              <sc-for list="{{syms}}" as="s" hint-placeholder-count="12">
+                <path d="{{s.d}}" transform="{{s.t}}" fill="none" stroke="{{s.ink}}" stroke-width="{{s.sw}}" stroke-linecap="round" style="{{s.anim}}"></path>
+              </sc-for>
+              <sc-for list="{{selMarks}}" as="m" hint-placeholder-count="0">
+                <rect x="{{m.x}}" y="{{m.y}}" width="34" height="34" fill="none" stroke="#ec3013" stroke-width="2" stroke-dasharray="4 3"></rect>
+              </sc-for>
+              <sc-for list="{{rlabels}}" as="l" hint-placeholder-count="4">
+                <text x="{{l.x}}" y="{{l.y}}" text-anchor="middle" dominant-baseline="middle" style="font:600 12px 'Archivo',system-ui" fill="rgba(32,30,29,0.5)">{{l.t}}</text>
+              </sc-for>
+            </g>
+          </svg>
+          <div style="position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column">
+            <button onClick="{{zoomIn}}" style="width:38px;height:38px;font:600 17px/1 'Archivo',system-ui;background:#f3f2f2;border:1.5px solid rgba(32,30,29,.45);cursor:pointer">＋</button>
+            <button onClick="{{zoomOut}}" style="width:38px;height:38px;margin-top:-1.5px;font:600 17px/1 'Archivo',system-ui;background:#f3f2f2;border:1.5px solid rgba(32,30,29,.45);cursor:pointer">−</button>
+            <button onClick="{{zoomReset}}" style="width:38px;height:38px;margin-top:-1.5px;font:600 9px/1 'Archivo','Noto Sans JP',system-ui;background:#f3f2f2;border:1.5px solid rgba(32,30,29,.45);cursor:pointer">全体</button>
+          </div>
+          <div style="position:absolute;left:10px;top:8px;display:flex;align-items:center;gap:6px;padding:4px 7px;background:rgba(243,242,242,.92);border:1px solid rgba(32,30,29,.25)">
+            <span style="width:10px;height:10px;border-radius:50%;background:#ec3013"></span>
+            <span style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui">次に拾う目</span>
+          </div>
+          <sc-if value="{{sheetBtnOn}}" hint-placeholder-val="{{false}}">
+            <button onClick="{{openSheet}}" style="position:absolute;left:10px;bottom:10px;padding:10px 14px;font:600 12px/1 'Archivo','Noto Sans JP',system-ui;color:#f3f2f2;background:#201e1d;border:0;cursor:pointer">目数表を開く</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{tableInline}}" hint-placeholder-val="{{false}}">
+        <div style="flex:{{tableFlex}};min-height:0;overflow-y:auto;border-top:2px solid rgba(32,30,29,.4);background:#f3f2f2">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:7px 10px;font:600 9.5px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.1em;color:rgba(32,30,29,.6);border-bottom:2px solid rgba(32,30,29,.4);width:44px">段</th>
+                <th style="text-align:left;padding:7px 6px;font:600 9.5px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.1em;color:rgba(32,30,29,.6);border-bottom:2px solid rgba(32,30,29,.4)">手順</th>
+                <th style="text-align:right;padding:7px 10px;font:600 9.5px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.1em;color:rgba(32,30,29,.6);border-bottom:2px solid rgba(32,30,29,.4);width:96px">目数</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{tableRows}}" as="r" hint-placeholder-count="4">
+                <tr style="background:{{r.bg}}">
+                  <td style="padding:9px 10px;font:800 13px/1.2 'Archivo',system-ui;border-bottom:1px solid rgba(32,30,29,.2);vertical-align:top;color:{{r.nc}}">{{r.n}}</td>
+                  <td style="padding:9px 6px;font:400 12px/1.45 'Archivo','Noto Sans JP',system-ui;border-bottom:1px solid rgba(32,30,29,.2);vertical-align:top"><span>{{r.steps}}</span><sc-if value="{{r.warn}}" hint-placeholder-val="{{false}}"><span style="display:block;margin-top:4px;font:500 10.5px/1.35 'Archivo','Noto Sans JP',system-ui;color:#b3230e">{{r.warn}}</span></sc-if></td>
+                  <td style="padding:9px 10px;text-align:right;font:600 11.5px/1.35 'Archivo','Noto Sans JP',system-ui;border-bottom:1px solid rgba(32,30,29,.2);vertical-align:top">{{r.count}}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:none;width:392px;display:flex;flex-direction:column;background:#eae9e9;border-left:2px solid rgba(32,30,29,.4)">
+    <sc-if value="{{crChips}}" hint-placeholder-val="{{true}}">
+      <div style="flex:none;padding:8px 10px 9px;border-top:2px solid rgba(32,30,29,.4);background:#f3f2f2">
+        <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:6px">
+          <span style="font:800 13px/1 'Archivo','Noto Sans JP',system-ui">{{curLabel}}</span>
+          <span style="font:500 11px/1 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.62)">{{progA}}</span>
+          <span style="margin-left:auto;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;color:#b3230e">{{progB}}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-height:58px;overflow-y:auto">
+          <sc-for list="{{curItems}}" as="it" hint-placeholder-count="5">
+            <button onClick="{{it.press}}" style="padding:5px 8px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;border:1px solid {{it.bd}};background:{{it.bg}};color:{{it.fg}};cursor:pointer">{{it.label}}</button>
+          </sc-for>
+          <span style="width:2px;height:22px;background:#ec3013"></span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{crTicker}}" hint-placeholder-val="{{false}}">
+      <div style="flex:none;padding:8px 10px 9px;border-top:2px solid rgba(32,30,29,.4);background:#f3f2f2">
+        <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;overflow-x:auto;padding-bottom:6px">
+          <span style="flex:none;font:800 13px/1 'Archivo','Noto Sans JP',system-ui">{{curLabel}}</span>
+          <sc-for list="{{curItems}}" as="it" hint-placeholder-count="5">
+            <button onClick="{{it.press}}" style="flex:none;padding:6px 9px;font:600 11.5px/1 'Archivo','Noto Sans JP',system-ui;border:0;border-left:2px solid {{it.bd}};background:{{it.bg}};color:{{it.fg}};cursor:pointer">{{it.label}}</button>
+          </sc-for>
+          <span style="flex:none;width:2px;height:24px;background:#ec3013"></span>
+        </div>
+        <div style="height:6px;background:rgba(32,30,29,.14)">
+          <div style="height:6px;background:#ec3013;width:{{progPct}}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="font:500 10.5px/1 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.62)">{{progA}}</span>
+          <span style="font:600 10.5px/1 'Archivo','Noto Sans JP',system-ui;color:#b3230e">{{progB}}</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{crCompact}}" hint-placeholder-val="{{false}}">
+      <div style="flex:none;display:flex;align-items:center;gap:14px;padding:14px 16px 15px;border-bottom:2px solid rgba(32,30,29,.4);background:#f3f2f2">
+        <div style="display:flex;flex-direction:column">
+          <span style="font:900 34px/1 'Archivo',system-ui;letter-spacing:-.02em">{{fracBig}}</span>
+          <span style="font:500 10px/1.3 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.6)">前段から拾った目</span>
+        </div>
+        <div style="width:1px;align-self:stretch;background:rgba(32,30,29,.25)"></div>
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1">
+          <span style="font:600 11px/1 'Archivo','Noto Sans JP',system-ui">{{curLabel}}・{{progB}}</span>
+          <div style="display:flex;gap:4px;overflow:hidden">
+            <sc-for list="{{tailItems}}" as="it" hint-placeholder-count="3">
+              <button onClick="{{it.press}}" style="flex:none;padding:5px 8px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;border:1px solid {{it.bd}};background:{{it.bg}};color:{{it.fg}};cursor:pointer">{{it.label}}</button>
+            </sc-for>
+            <span style="flex:none;width:2px;height:22px;background:#ec3013"></span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{selOn}}" hint-placeholder-val="{{false}}">
+      <div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:11px 14px;background:#201e1d;color:#f3f2f2">
+        <span style="font:600 11px/1.3 'Archivo','Noto Sans JP',system-ui">選択中：{{selLabel}}／目ボタンで種類を変更</span>
+        <sc-if value="{{selRepOn}}" hint-placeholder-val="{{false}}">
+          <button onClick="{{unrep}}" style="padding:6px 9px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;background:none;color:#f3f2f2;border:1px solid rgba(243,242,242,.5);cursor:pointer">繰り返しを解除</button>
+        </sc-if>
+        <button onClick="{{delSel}}" style="margin-left:auto;padding:6px 9px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;background:#ec3013;color:#f3f2f2;border:0;cursor:pointer">削除</button>
+        <button onClick="{{clearSel}}" style="padding:6px 9px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;background:none;color:#f3f2f2;border:1px solid rgba(243,242,242,.5);cursor:pointer">解除</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{kbGrid}}" hint-placeholder-val="{{true}}">
+      <div style="flex:1;min-height:0;padding:16px 16px 34px;display:flex;flex-direction:column;gap:12px;background:#eae9e9">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <sc-for list="{{stitchKeys}}" as="k" hint-placeholder-count="6">
+            <button onClick="{{k.press}}" style="height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;background:{{k.bg}};border:1.5px solid rgba(32,30,29,.45);cursor:pointer">
+              <svg viewBox="-12 -27 24 28" style="width:28px;height:32px"><path d="{{k.d}}" fill="{{k.fill}}" stroke="#201e1d" stroke-width="2.2" stroke-linecap="round"></path></svg>
+              <span style="font:600 12px/1 'Archivo','Noto Sans JP',system-ui">{{k.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+          <sc-for list="{{modKeys}}" as="k" hint-placeholder-count="5">
+            <button onClick="{{k.press}}" style="height:62px;padding:3px;font:600 11px/1.3 'Archivo','Noto Sans JP',system-ui;background:{{k.bg}};color:{{k.fg}};border:1.5px solid {{k.bd}};cursor:pointer">{{k.label}}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <sc-for list="{{opKeys}}" as="k" hint-placeholder-count="4">
+            <button onClick="{{k.press}}" style="height:60px;padding:3px;font:600 11.5px/1.3 'Archivo','Noto Sans JP',system-ui;background:{{k.bg}};color:{{k.fg}};border:1.5px solid {{k.bd}};cursor:pointer">{{k.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{kbRows}}" hint-placeholder-val="{{false}}">
+      <div style="flex:none;padding:8px 8px 44px;display:flex;flex-direction:column;gap:7px;background:#eae9e9;border-top:2px solid rgba(32,30,29,.4)">
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <span style="flex:none;writing-mode:vertical-rl;font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.2em;color:rgba(32,30,29,.6);padding:2px 0;border-right:2px solid rgba(32,30,29,.3)">目</span>
+          <div style="flex:1;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">
+            <sc-for list="{{stitchKeys}}" as="k" hint-placeholder-count="6">
+              <button onClick="{{k.press}}" style="flex:none;width:62px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;background:{{k.bg}};border:1.5px solid rgba(32,30,29,.45);cursor:pointer">
+                <svg viewBox="-12 -27 24 28" style="width:22px;height:25px"><path d="{{k.d}}" fill="{{k.fill}}" stroke="#201e1d" stroke-width="2.2" stroke-linecap="round"></path></svg>
+                <span style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui">{{k.name}}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <span style="flex:none;writing-mode:vertical-rl;font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.2em;color:rgba(32,30,29,.6);padding:2px 0;border-right:2px solid rgba(32,30,29,.3)">先に選ぶ</span>
+          <div style="flex:1;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">
+            <sc-for list="{{modKeys}}" as="k" hint-placeholder-count="5">
+              <button onClick="{{k.press}}" style="flex:none;width:74px;height:50px;padding:2px;font:600 10px/1.2 'Archivo','Noto Sans JP',system-ui;background:{{k.bg}};color:{{k.fg}};border:1.5px solid {{k.bd}};cursor:pointer">{{k.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <span style="flex:none;writing-mode:vertical-rl;font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.2em;color:rgba(32,30,29,.6);padding:2px 0;border-right:2px solid rgba(32,30,29,.3)">段</span>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+            <sc-for list="{{opKeys}}" as="k" hint-placeholder-count="4">
+              <button onClick="{{k.press}}" style="height:48px;padding:2px;font:600 10.5px/1.2 'Archivo','Noto Sans JP',system-ui;background:{{k.bg}};color:{{k.fg}};border:1.5px solid {{k.bd}};cursor:pointer">{{k.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{kbThumb}}" hint-placeholder-val="{{false}}">
+      <div style="flex:none;padding:10px 10px 44px;display:flex;flex-direction:column;gap:7px;background:#eae9e9;border-top:2px solid rgba(32,30,29,.4)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <sc-for list="{{thumbBig}}" as="k" hint-placeholder-count="4">
+            <button onClick="{{k.press}}" style="height:72px;display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:0 12px;background:{{k.bg}};color:{{k.fg}};border:2px solid {{k.bd}};cursor:pointer">
+              <sc-if value="{{k.hasSym}}" hint-placeholder-val="{{true}}">
+                <svg viewBox="-12 -27 24 28" style="width:24px;height:27px;flex:none"><path d="{{k.d}}" fill="{{k.fill}}" stroke="{{k.fg}}" stroke-width="2.2" stroke-linecap="round"></path></svg>
+              </sc-if>
+              <span style="font:700 13px/1.2 'Archivo','Noto Sans JP',system-ui;text-align:left">{{k.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:2px">
+          <sc-for list="{{thumbRest}}" as="k" hint-placeholder-count="8">
+            <button onClick="{{k.press}}" style="flex:none;min-width:56px;height:44px;padding:2px 6px;font:600 10px/1.2 'Archivo','Noto Sans JP',system-ui;background:{{k.bg}};color:{{k.fg}};border:1.5px solid {{k.bd}};cursor:pointer">{{k.label}}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <sc-for list="{{thumbOps}}" as="k" hint-placeholder-count="3">
+            <button onClick="{{k.press}}" style="height:44px;padding:2px;font:600 10.5px/1.2 'Archivo','Noto Sans JP',system-ui;background:{{k.bg}};color:{{k.fg}};border:1.5px solid {{k.bd}};cursor:pointer">{{k.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    </div>
+    </div>
+
+    <sc-if value="{{sheetOn}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;inset:0;background:rgba(32,30,29,.35);display:flex;flex-direction:column;justify-content:flex-end" onClick="{{closeSheet}}">
+        <div style="max-height:62%;display:flex;flex-direction:column;background:#f3f2f2;border-top:2px solid #201e1d;padding-bottom:30px" onClick="{{stop}}">
+          <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:2px solid rgba(32,30,29,.4)">
+            <span style="font:800 14px/1 'Archivo','Noto Sans JP',system-ui">目数表</span>
+            <button onClick="{{closeSheet}}" style="margin-left:auto;padding:7px 11px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:1.5px solid #201e1d;cursor:pointer">閉じる</button>
+          </div>
+          <div style="overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <tbody>
+                <sc-for list="{{tableRows}}" as="r" hint-placeholder-count="4">
+                  <tr style="background:{{r.bg}}">
+                    <td style="padding:10px;font:800 13px/1.2 'Archivo',system-ui;border-bottom:1px solid rgba(32,30,29,.2);vertical-align:top;width:44px;color:{{r.nc}}">{{r.n}}</td>
+                    <td style="padding:10px 6px;font:400 12px/1.45 'Archivo','Noto Sans JP',system-ui;border-bottom:1px solid rgba(32,30,29,.2);vertical-align:top"><span>{{r.steps}}</span><sc-if value="{{r.warn}}" hint-placeholder-val="{{false}}"><span style="display:block;margin-top:4px;font:500 10.5px/1.35 'Archivo','Noto Sans JP',system-ui;color:#b3230e">{{r.warn}}</span></sc-if></td>
+                    <td style="padding:10px;text-align:right;font:600 11.5px/1.35 'Archivo','Noto Sans JP',system-ui;border-bottom:1px solid rgba(32,30,29,.2);vertical-align:top;width:96px">{{r.count}}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{yarnOn}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;inset:0;background:rgba(32,30,29,.35);display:flex;flex-direction:column;justify-content:flex-end" onClick="{{closeYarn}}">
+        <div style="background:#f3f2f2;border-top:2px solid #201e1d;padding-bottom:34px" onClick="{{stop}}">
+          <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:2px solid rgba(32,30,29,.4)">
+            <span style="font:800 14px/1 'Archivo','Noto Sans JP',system-ui">糸リスト</span>
+            <span style="margin-left:10px;font:500 10.5px/1 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.6)">タップで持ち替え</span>
+            <button onClick="{{closeYarn}}" style="margin-left:auto;padding:7px 11px;font:600 11px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:1.5px solid #201e1d;cursor:pointer">閉じる</button>
+          </div>
+          <sc-for list="{{yarnRows}}" as="y" hint-placeholder-count="2">
+            <button onClick="{{y.press}}" style="width:100%;display:flex;align-items:center;gap:10px;padding:13px 12px;background:{{y.bg}};border:0;border-bottom:1px solid rgba(32,30,29,.2);cursor:pointer;text-align:left">
+              <span style="width:26px;height:26px;border-radius:50%;border:1.5px solid #201e1d;background:{{y.color}};flex:none"></span>
+              <span style="font:700 13px/1.2 'Archivo','Noto Sans JP',system-ui">{{y.name}}</span>
+              <span style="font:400 11px/1.2 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.6)">{{y.memo}}</span>
+              <span style="margin-left:auto;font:600 10.5px/1 'Archivo','Noto Sans JP',system-ui;color:#b3230e">{{y.now}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{menuOn}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;inset:0" onClick="{{closeMenu}}">
+        <div style="position:absolute;right:10px;top:92px;min-width:180px;background:#f3f2f2;border:2px solid #201e1d" onClick="{{stop}}">
+          <button onClick="{{openYarn}}" style="width:100%;padding:12px;font:600 12px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:0;border-bottom:1px solid rgba(32,30,29,.25);cursor:pointer;text-align:left">糸リスト</button>
+          <button style="width:100%;padding:12px;font:600 12px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:0;border-bottom:1px solid rgba(32,30,29,.25);cursor:pointer;text-align:left;opacity:.45">色を編集（S5・別案）</button>
+          <button style="width:100%;padding:12px;font:600 12px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:0;cursor:pointer;text-align:left;opacity:.45">書き出し（別案）</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{repAskOn}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;inset:0;background:rgba(32,30,29,.35);display:flex;align-items:center;justify-content:center;padding:24px" onClick="{{cancelRep}}">
+        <div style="width:100%;background:#f3f2f2;border:2px solid #201e1d;padding:16px;display:flex;flex-direction:column;gap:12px" onClick="{{stop}}">
+          <span style="font:800 15px/1.3 'Archivo','Noto Sans JP',system-ui">繰り返す回数</span>
+          <span style="font:400 12px/1.5 'Archivo','Noto Sans JP',system-ui;color:rgba(32,30,29,.7)">{{repSummary}}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button onClick="{{repDec}}" style="width:48px;height:48px;flex:none;font:700 20px/1 'Archivo',system-ui;background:none;border:1.5px solid #201e1d;cursor:pointer">−</button>
+            <input type="number" min="2" max="99" value="{{repCount}}" onChange="{{repType}}" style="flex:1;min-width:0;height:48px;box-sizing:border-box;padding:0 10px;font:800 22px/1 'Archivo',system-ui;text-align:center;color:#201e1d;background:#f3f2f2;border:1.5px solid #201e1d">
+            <span style="flex:none;font:600 12px/1 'Archivo','Noto Sans JP',system-ui">回</span>
+            <button onClick="{{repInc}}" style="width:48px;height:48px;flex:none;font:700 20px/1 'Archivo',system-ui;background:none;border:1.5px solid #201e1d;cursor:pointer">＋</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px">
+            <sc-for list="{{repOpts}}" as="o" hint-placeholder-count="6">
+              <button onClick="{{o.press}}" style="height:38px;font:600 11.5px/1.2 'Archivo','Noto Sans JP',system-ui;background:{{o.bg}};color:{{o.fg}};border:1.5px solid #201e1d;cursor:pointer">{{o.label}}</button>
+            </sc-for>
+          </div>
+          <span style="font:600 12px/1.4 'Archivo','Noto Sans JP',system-ui;color:#b3230e">{{repPreview}}</span>
+          <button onClick="{{repApply}}" style="padding:13px;font:600 13px/1 'Archivo','Noto Sans JP',system-ui;background:#ec3013;color:#f3f2f2;border:0;cursor:pointer;text-align:left">{{repApplyLabel}}</button>
+          <button onClick="{{repRest}}" style="padding:13px;font:600 13px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:1.5px solid #201e1d;cursor:pointer;text-align:left">段の終わりまで繰り返す</button>
+          <button onClick="{{cancelRep}}" style="padding:10px;font:600 12px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:1.5px solid rgba(32,30,29,.45);cursor:pointer">キャンセル</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{dlgOn}}" hint-placeholder-val="{{false}}">
+      <div style="position:absolute;inset:0;background:rgba(32,30,29,.4);display:flex;align-items:center;justify-content:center;padding:24px">
+        <div style="width:100%;background:#f3f2f2;border:2px solid #201e1d;box-shadow:0 16px 40px rgba(32,30,29,.28);padding:16px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:600 10px/1 'Archivo','Noto Sans JP',system-ui;letter-spacing:.14em;text-transform:uppercase;color:#b3230e">{{dlgKicker}}</span>
+          <span style="font:800 16px/1.35 'Archivo','Noto Sans JP',system-ui">{{dlgMsg}}</span>
+          <sc-if value="{{dlgQuietOn}}" hint-placeholder-val="{{true}}">
+            <button onClick="{{dlgQuiet}}" style="padding:13px;font:600 13px/1 'Archivo','Noto Sans JP',system-ui;background:#ec3013;color:#f3f2f2;border:0;cursor:pointer;text-align:left">残りは編まない</button>
+          </sc-if>
+          <button onClick="{{dlgWarn}}" style="padding:13px;font:600 13px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:1.5px solid #201e1d;cursor:pointer;text-align:left">このまま終える（警告を出す）</button>
+          <button onClick="{{dlgCancel}}" style="padding:13px;font:600 13px/1 'Archivo','Noto Sans JP',system-ui;background:none;border:1.5px solid rgba(32,30,29,.35);cursor:pointer;text-align:left">戻って続ける</button>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1194,&quot;height&quot;:834},&quot;keyboard&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;grid&quot;,&quot;rows&quot;,&quot;thumb&quot;],&quot;default&quot;:&quot;grid&quot;,&quot;tsType&quot;:&quot;'grid'|'rows'|'thumb'&quot;},&quot;viewMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tabs&quot;,&quot;split&quot;,&quot;sheet&quot;],&quot;default&quot;:&quot;tabs&quot;,&quot;tsType&quot;:&quot;'tabs'|'split'|'sheet'&quot;},&quot;currentRow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;chips&quot;,&quot;ticker&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;chips&quot;,&quot;tsType&quot;:&quot;'chips'|'ticker'|'compact'&quot;},&quot;autoTurningChain&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showRoundNumbers&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  T = {ch:'鎖編み',slst:'引き抜き編み',sc:'細編み',hdc:'中長編み',dc:'長編み',tr:'長々編み'};
+  S = {ch:'鎖',slst:'引抜',sc:'細',hdc:'中長',dc:'長',tr:'長々'};
+  D = {
+    sc:'M-7,-15 L7,-3 M7,-15 L-7,-3',
+    ch:'M-9,-14 C-9,-19.5 9,-19.5 9,-14 C9,-8.5 -9,-8.5 -9,-14 Z',
+    slst:'M-5.5,-12 C-5.5,-15.5 5.5,-15.5 5.5,-12 C5.5,-8.5 -5.5,-8.5 -5.5,-12 Z',
+    hdc:'M0,-3 L0,-22 M-7,-22 L7,-22',
+    dc:'M0,-3 L0,-22 M-7,-22 L7,-22 M-6,-15.5 L6,-12.5',
+    tr:'M0,-3 L0,-25 M-7,-25 L7,-25 M-6,-18 L6,-15 M-6,-12 L6,-9'
+  };
+  YARNS = [
+    {id:'cream',name:'生成り',color:'#e8dcc4',memo:'メイン色'},
+    {id:'brown',name:'こげ茶',color:'#4a342a',memo:'鼻'}
+  ];
+  ORDER = ['sc','ch','slst','hdc','dc','tr'];
+  // 立ち上がりの鎖：目数と「1目と数えるか」
+  TCH = {sc:{n:1,count:false}, hdc:{n:2,count:true}, dc:{n:3,count:true}, tr:{n:4,count:true}};
+
+  state = {
+    rounds: this.initRounds(),
+    pend: {mode:null,n:2,bundle:false,rest:false},
+    yarn: 'cream', tab: 'chart', sheet: false, yarnSheet: false, menu: false,
+    dlg: null, repFrom: null, repAsk: false, repCount: 6, sel: null, lastId: null,
+    pan: {x:0,y:0,s:0.78}, hist: [], fut: []
+  };
+
+  uid() { return Math.random().toString(36).slice(2,8); }
+  mk(type, o) {
+    return Object.assign({id:this.uid(),type:type,n:1,mode:null,bundle:false,turning:false,yarn:'cream'}, o||{});
+  }
+  initRounds() {
+    const mk = (t,o) => this.mk(t,o);
+    const r1 = []; for (let i=0;i<6;i++) r1.push(mk('sc'));
+    const r2 = []; for (let i=0;i<6;i++) r2.push(mk('sc',{mode:'inc',n:2}));
+    const r3 = []; for (let i=0;i<6;i++) { r3.push(mk('sc')); r3.push(mk('sc',{mode:'inc',n:2})); }
+    return [
+      {n:1,ring:true,closed:true,stitches:r1},
+      {n:2,closed:true,stitches:r2},
+      {n:3,closed:true,stitches:r3},
+      {n:4,closed:false,stitches:[mk('ch',{turning:true}),mk('sc'),mk('sc'),mk('sc',{mode:'inc',n:2}),mk('sc')]}
+    ];
+  }
+
+  consumes(st) {
+    if (st.type === 'skip') return 1;
+    if (st.turning) return st.count ? 1 : 0;
+    if (st.type === 'ch') return 0;
+    if (st.mode === 'dec') return st.n;
+    return 1;
+  }
+  produces(st) {
+    if (st.type === 'skip') return 0;
+    if (st.turning) return st.count ? 1 : 0;
+    if (st.mode === 'inc') return st.n;
+    return 1;
+  }
+  producedOf(r) { return r.stitches.reduce((a,s)=>a+this.produces(s),0); }
+  consumedOf(r) { return r.stitches.reduce((a,s)=>a+this.consumes(s),0); }
+
+  label(st) {
+    if (st.type === 'skip') return '飛ばす';
+    if (st.turning) return st.type === 'slst' ? '引き抜き'
+      : '立ち上がり鎖' + st.n + '目' + (st.count ? '（1目と数える）' : '（目数に数えない）');
+    const base = (st.bundle ? '束に' : '') + this.T[st.type];
+    if (st.mode === 'inc') return base + st.n + '目編み入れる';
+    if (st.mode === 'dec') return base + st.n + '目一度';
+    return base + '1目';
+  }
+  short(st) {
+    if (st.type === 'skip') return '飛';
+    if (st.turning) return st.type === 'slst' ? '引' : '立' + st.n;
+    const b = (st.bundle ? '束' : '') + this.S[st.type];
+    if (st.mode === 'inc') return b + st.n + '入';
+    if (st.mode === 'dec') return b + st.n + '度';
+    return b;
+  }
+
+  compress(sig) {
+    const n = sig.length;
+    if (!n) return '';
+    for (let u = 1; u <= n/2; u++) {
+      if (n % u) continue;
+      let ok = true;
+      for (let i = u; i < n && ok; i++) if (sig[i] !== sig[i % u]) ok = false;
+      if (ok) {
+        const times = n/u;
+        return u === 1 ? sig[0].replace(/1目$/,'') + '×' + times
+          : '（' + sig.slice(0,u).join('、') + '）×' + times;
+      }
+    }
+    return sig.join('、');
+  }
+  steps(r) {
+    if (!r.closed) return '入力中';
+    const body = r.stitches.filter(s=>!s.turning);
+    const sig = body.map(s=>this.label(s));
+    if (r.ring) {
+      const same = sig.every(s=>s===sig[0]);
+      return 'わの作り目に' + (same ? sig[0].replace(/1目$/,'') + this.producedOf(r) + '目' : this.compress(sig));
+    }
+    const lead = r.stitches.length && r.stitches[0].turning && r.stitches[0].type === 'ch'
+      ? this.label(r.stitches[0]) + '、' : '';
+    return lead + this.compress(sig);
+  }
+
+  // ── mutations ──
+  mut(fn, lastId) {
+    const snap = JSON.stringify(this.state.rounds);
+    const rounds = JSON.parse(snap);
+    const out = fn(rounds);
+    this.setState(s=>({rounds:rounds, hist:s.hist.concat([snap]).slice(-50), fut:[], lastId: out || lastId || null}));
+  }
+  cur(rounds) {
+    let c = rounds[rounds.length-1];
+    if (c.closed) { rounds.push({n:c.n+1,closed:false,stitches:[]}); c = rounds[rounds.length-1]; }
+    return c;
+  }
+  prevCount(rounds, idx) { return idx <= 0 ? 0 : this.producedOf(rounds[idx-1]); }
+
+  pressStitch(type) {
+    const sel = this.state.sel;
+    if (sel) {
+      this.mut(rounds=>{
+        const st = rounds[sel.ri].stitches[sel.si];
+        if (st) { st.type = type; st.turning = false; return st.id; }
+      });
+      this.setState({sel:null});
+      return;
+    }
+    const p = this.state.pend, yarn = this.state.yarn;
+    const auto = this.props.autoTurningChain !== false;
+    this.mut(rounds=>{
+      const c = this.cur(rounds);
+      const prev = this.prevCount(rounds, rounds.length-1);
+      if (auto && !c.ring && c.stitches.length === 0 && type !== 'ch' && type !== 'slst') {
+        const t = this.TCH[type] || {n:1,count:false};
+        c.stitches.push(this.mk('ch',{turning:true, n:t.n, count:t.count, yarn:yarn}));
+      }
+      let lastId = null;
+      const one = () => {
+        const st = this.mk(type,{mode:p.mode, n:p.mode?p.n:1, bundle:p.bundle, yarn:yarn});
+        c.stitches.push(st); lastId = st.id;
+      };
+      if (p.rest && prev) {
+        let guard = 0;
+        while (this.consumedOf(c) < prev && guard++ < 80) one();
+        if (!lastId) one();
+      } else one();
+      return lastId;
+    });
+    this.setState({pend:{mode:null,n:2,bundle:false,rest:false}});
+  }
+
+  tapMod(id) {
+    this.setState(s=>{
+      const p = Object.assign({}, s.pend);
+      if (id === 'inc' || id === 'dec') {
+        if (p.mode !== id) { p.mode = id; p.n = 2; }
+        else if (p.n === 2) p.n = 3;
+        else { p.mode = null; p.n = 2; }
+      } else if (id === 'bundle') p.bundle = !p.bundle;
+      else if (id === 'rest') p.rest = !p.rest;
+      return {pend:p};
+    });
+  }
+  skip() { this.mut(rounds=>{ const st = this.mk('skip'); this.cur(rounds).stitches.push(st); return st.id; }); }
+
+  finishRound() {
+    const rounds = this.state.rounds;
+    const c = rounds[rounds.length-1];
+    if (c.closed) return;
+    const prev = this.prevCount(rounds, rounds.length-1);
+    const consumed = this.consumedOf(c);
+    const left = prev - consumed;
+    if (!c.ring && prev && left !== 0) {
+      this.setState({dlg:{prev:prev, left:left, consumed:consumed, over:left < 0}});
+      return;
+    }
+    this.closeRound(null);
+  }
+  closeRound(mode) {
+    const yarn = this.state.yarn;
+    this.mut(rounds=>{
+      const c = rounds[rounds.length-1];
+      c.closed = true;
+      c.quiet = mode === 'quiet';
+      if (!c.ring) c.stitches.push(this.mk('slst',{turning:true,yarn:yarn}));
+      rounds.push({n:c.n+1,closed:false,stitches:[]});
+    });
+    this.setState({dlg:null, sel:null});
+  }
+  delOne() {
+    this.mut(rounds=>{
+      let c = rounds[rounds.length-1];
+      if (!c.stitches.length && rounds.length > 1) {
+        rounds.pop();
+        c = rounds[rounds.length-1];
+        c.closed = false;
+        const last = c.stitches[c.stitches.length-1];
+        if (last && last.type === 'slst' && last.turning) c.stitches.pop();
+        return;
+      }
+      c.stitches.pop();
+    });
+    this.setState({sel:null});
+  }
+  undo() {
+    const s = this.state;
+    if (!s.hist.length) return;
+    this.setState({
+      rounds: JSON.parse(s.hist[s.hist.length-1]),
+      hist: s.hist.slice(0,-1),
+      fut: [JSON.stringify(s.rounds)].concat(s.fut).slice(0,50),
+      sel: null, lastId: null
+    });
+  }
+  redo() {
+    const s = this.state;
+    if (!s.fut.length) return;
+    this.setState({
+      rounds: JSON.parse(s.fut[0]),
+      fut: s.fut.slice(1),
+      hist: s.hist.concat([JSON.stringify(s.rounds)]).slice(-50),
+      sel: null, lastId: null
+    });
+  }
+  repStart() {
+    const c = this.state.rounds[this.state.rounds.length-1];
+    this.setState({repFrom: c.closed ? 0 : c.stitches.length});
+  }
+  repEnd() { if (this.state.repFrom !== null) this.setState({repAsk:true}); }
+  setRep(n) { this.setState({repCount: Math.max(2, Math.min(99, n|0))}); }
+  applyRep(count) {
+    const from = this.state.repFrom;
+    this.mut(rounds=>{
+      const c = rounds[rounds.length-1];
+      const unit = c.stitches.slice(from);
+      if (!unit.length) return;
+      const prev = this.prevCount(rounds, rounds.length-1);
+      const gid = this.uid();
+      let lastId = null;
+      c.stitches.slice(from).forEach(s=>{ s.rep = gid; });
+      const copy = () => unit.forEach(s=>{
+        const st = Object.assign({},s,{id:this.uid(), rep:gid});
+        c.stitches.push(st); lastId = st.id;
+      });
+      if (count === 'end') { let guard = 0; while (prev && this.consumedOf(c) < prev && guard++ < 40) copy(); }
+      else for (let i=1;i<count;i++) copy();
+      return lastId;
+    });
+    this.setState({repFrom:null, repAsk:false});
+  }
+
+  // ── 記号図の作図 ──
+  build() {
+    const rounds = this.state.rounds, R2D = 180/Math.PI;
+    const rad = i => 42 + i*44;
+    const openIdx = rounds.length-1;
+    const syms = [], guides = [], rlabels = [], selMarks = [], joins = [], works = [];
+    const yarnOf = st => this.YARNS.filter(y=>y.id===st.yarn)[0] || this.YARNS[0];
+    const stemmed = t => t === 'hdc' || t === 'dc' || t === 'tr';
+    const pt = (a, r) => ({x:Math.cos(a)*r, y:Math.sin(a)*r});
+    const fmt = p => p.x.toFixed(1) + ',' + p.y.toFixed(1);
+    const counts = rounds.map(r=>this.producedOf(r));
+    const openRound = rounds[openIdx];
+    const consumedOpen = this.consumedOf(openRound);
+    const prevSlots = openIdx > 0 ? Math.max(counts[openIdx-1], 1) : 0;
+    const slotAng = (count, idx) => (-90 + idx*(360/Math.max(count,1))) * Math.PI/180;
+
+    const put = (st, i, a, r, tiltDeg, o) => {
+      const p = pt(a, r), y0 = yarnOf(st), open = i === openIdx;
+      const acc = o && o.hl;
+      syms.push({
+        key: (o && o.key) || st.id, d: this.D[st.type],
+        t: 'translate(' + fmt(p) + ') rotate(' + (a*R2D + 90 + (tiltDeg||0)).toFixed(1) + ')',
+        color: acc ? 'rgba(236,48,19,0.16)' : y0.color,
+        ink: acc ? '#ec3013' : (open ? '#201e1d' : 'rgba(32,30,29,0.78)'),
+        fill: st.type === 'slst' ? (acc ? '#ec3013' : y0.color) : 'none',
+        sw: acc ? 3.2 : 2, ow: acc ? 9 : (open ? 6 : 5.4),
+        anim: (o && o.anim) ? 'animation:stIn .34s ease-out'
+          : (acc ? 'animation:hlPulse .5s ease-out' : '')
+      });
+    };
+
+    // 目を1つ描く：angs は根元を置く角度（増し目は1つ、2目一度は拾った数だけ）
+    const draw = (st, i, angs, isNew, hlHere) => {
+      if (st.type === 'skip') return;
+      const r0 = rad(i), p = this.produces(st);
+      if (st.mode === 'inc' && p > 1) {
+        // 増し目：根元は前段の同じ1目、頭だけを開く（JISのV字）
+        const a = angs[0], stem = stemmed(st.type);
+        const tilt = stem ? 16 : 12, spread = stem ? 0 : (11/r0);
+        for (let k = 0; k < p; k++) {
+          const off = k - (p-1)/2;
+          put(st, i, a + off*spread, r0, off*tilt, {key:st.id+'-'+k, anim:isNew, hl:hlHere === k});
+        }
+        return;
+      }
+      if (st.mode === 'dec' && angs.length > 1) {
+        // 一度：根元は拾った目それぞれ、頭をひとつに寄せる（逆V字）
+        const mid = angs.reduce((x,y)=>x+y,0)/angs.length;
+        angs.forEach((a,k)=>put(st, i, a, r0, (mid-a)*R2D*(stemmed(st.type)?0.95:0.8), {key:st.id+'-'+k, anim:isNew, hl:hlHere >= 0}));
+        return;
+      }
+      put(st, i, angs[0], r0, 0, {anim:isNew, hl:hlHere >= 0});
+    };
+
+    rounds.forEach((r,i)=>{
+      const count = counts[i];
+      if (count) guides.push({r:rad(i)});
+      const open = i === openIdx;
+      if (!open || i === 0 || !prevSlots) {
+        // 完成した段：目数で均等に割る
+        let idx = 0;
+        r.stitches.forEach(st=>{
+          const p = this.produces(st);
+          if (st.turning) { idx += p; return; }
+          if (st.type === 'skip') return;
+          const angs = [];
+          if (st.mode === 'dec' && st.n > 1) for (let k=0;k<st.n;k++) angs.push(slotAng(count, idx) + (k-(st.n-1)/2)*(16/rad(i)));
+          else if (p > 1) angs.push(slotAng(count, idx + (p-1)/2));
+          else angs.push(slotAng(count, idx));
+          const hlHere = (i === openIdx-1 && consumedOpen >= idx && consumedOpen < idx + Math.max(p,1))
+            ? consumedOpen - idx : -1;
+          draw(st, i, angs, false, hlHere);
+          idx += p;
+        });
+      } else {
+        // 入力中の段：前段の「拾った目」の真上に積んでいく
+        let cons = 0;
+        r.stitches.forEach(st=>{
+          if (st.turning) { cons += this.consumes(st); return; }
+          const need = this.consumes(st);
+          const angs = [];
+          if (need === 0) angs.push(slotAng(prevSlots, cons) - (360/prevSlots)*0.45*Math.PI/180);
+          else for (let k=0;k<need;k++) angs.push(slotAng(prevSlots, cons+k));
+          const isNew = st.id === this.state.lastId;
+          draw(st, i, angs, isNew, -1);
+          if (isNew && need > 0) {
+            works.push({d:'M' + fmt(pt(angs[0], rad(i-1)+15)) + ' L' + fmt(pt(angs[0], rad(i)-4))});
+          }
+          cons += need;
+        });
+      }
+      // 立ち上がりの鎖・段を閉じる引き抜き
+      let t = 0;
+      r.stitches.forEach(st=>{
+        if (!st.turning) return;
+        const step = 360/Math.max(count,1);
+        const a = (-90 - step*(0.45 + t*0.45)) * Math.PI/180;
+        if (st.type === 'slst') put(st, i, a, rad(i) - 13, 0, {key:st.id+'-t'});
+        else for (let k = 0; k < Math.max(st.n,1); k++)
+          put(st, i, a, rad(i) - 16 + k*14, 0, {key:st.id+'-t'+k});
+        t++;
+      });
+      if (this.props.showRoundNumbers !== false && count) {
+        const a = (-90 - 16) * Math.PI/180, p = pt(a, rad(i)+17);
+        rlabels.push({t:String(r.n), x:p.x.toFixed(1), y:p.y.toFixed(1)});
+      }
+      const sel = this.state.sel;
+      if (sel && sel.ri === i) {
+        const a = slotAng(Math.max(count,1), Math.min(sel.si, Math.max(count-1,0))), p = pt(a, rad(i));
+        selMarks.push({x:(p.x-17).toFixed(1), y:(p.y-30).toFixed(1)});
+      }
+    });
+
+    let hl = null;
+    if (prevSlots && consumedOpen < prevSlots) {
+      const p = pt(slotAng(prevSlots, consumedOpen), rad(openIdx-1));
+      hl = {x:p.x.toFixed(1), y:p.y.toFixed(1)};
+    }
+    return {syms:syms, guides:guides, rlabels:rlabels, selMarks:selMarks, joins:joins, works:works,
+      hl:hl, consumed:consumedOpen, prev:prevSlots, openIdx:openIdx};
+  }
+
+  panDown = (e) => {
+    this._p = {x:e.clientX, y:e.clientY};
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+  };
+  panMove = (e) => {
+    if (!this._p) return;
+    const dx = e.clientX - this._p.x, dy = e.clientY - this._p.y;
+    this._p = {x:e.clientX, y:e.clientY};
+    this.setState(s=>({pan:{x:s.pan.x+dx*1.1/s.pan.s, y:s.pan.y+dy*1.1/s.pan.s, s:s.pan.s}}));
+  };
+  panUp = () => { this._p = null; };
+  wheel = (e) => {
+    const k = e.deltaY > 0 ? 0.92 : 1.08;
+    this.setState(s=>({pan:{x:s.pan.x, y:s.pan.y, s:Math.min(3, Math.max(0.5, s.pan.s*k))}}));
+  };
+  zoom(k) { this.setState(s=>({pan:{x:s.pan.x, y:s.pan.y, s:Math.min(3, Math.max(0.5, s.pan.s*k))}})); }
+
+  renderVals() {
+    const s = this.state;
+    const kb = this.props.keyboard || 'grid';
+    const vm = this.props.viewMode || 'split';
+    const cr = this.props.currentRow || 'compact';
+    const g = this.build();
+    const rounds = s.rounds;
+    const ink = '#201e1d', accent = '#ec3013', bg = '#f3f2f2', surf = '#eae9e9';
+
+    const tableRows = rounds.map((r,i)=>{
+      const produced = this.producedOf(r);
+      const chains = r.stitches.reduce((a,st)=>a + (st.type==='ch' && !st.turning ? this.produces(st) : 0), 0);
+      const prev = this.prevCount(rounds, i);
+      const consumed = this.consumedOf(r);
+      const over = consumed > prev;
+      const warn = r.closed && !r.quiet && !r.ring && prev && consumed !== prev
+        ? (over ? '前段' + prev + '目に対して' + consumed + '目拾っています'
+          : '前段' + prev + '目のうち' + consumed + '目しか拾っていません') : '';
+      const open = !r.closed;
+      return {
+        n: String(r.n), nc: open ? accent : ink, steps: this.steps(r),
+        count: open ? '—' : (chains ? '合計' + produced + '目／鎖抜き' + (produced-chains) + '目' : produced + '目'),
+        warn: warn,
+        bg: open ? 'rgba(236,48,19,0.07)' : (warn ? 'rgba(236,48,19,0.13)' : 'transparent')
+      };
+    }).reverse();
+
+    const openRound = rounds[g.openIdx];
+    const items = openRound.stitches.map((st,si)=>{
+      const sel = s.sel && s.sel.ri === g.openIdx && s.sel.si === si;
+      return {
+        label: this.short(st),
+        bg: sel ? ink : (st.turning ? 'rgba(32,30,29,0.08)' : bg),
+        fg: sel ? bg : ink,
+        bd: sel ? ink : 'rgba(32,30,29,0.35)',
+        press: () => this.setState({sel: sel ? null : {ri:g.openIdx, si:si}})
+      };
+    });
+
+    const stitchKeys = this.ORDER.map(type=>({
+      type: type, name: this.T[type], d: this.D[type],
+      fill: type === 'slst' ? ink : 'none', bg: bg,
+      press: () => this.pressStitch(type)
+    }));
+
+    const p = s.pend;
+    const mod = (id, label, active) => ({
+      label: label, bg: active ? accent : bg, fg: active ? bg : ink,
+      bd: active ? accent : 'rgba(32,30,29,0.45)',
+      press: () => id === 'skip' ? this.skip() : this.tapMod(id)
+    });
+    const modKeys = [
+      mod('inc', (p.mode==='inc'?p.n:2) + '目編み入れる', p.mode==='inc'),
+      mod('dec', (p.mode==='dec'?p.n:2) + '目一度', p.mode==='dec'),
+      mod('bundle', '束に', p.bundle),
+      mod('skip', '飛ばす', false),
+      mod('rest', '残りすべてに', p.rest)
+    ];
+    const op = (label, press, active) => ({
+      label: label, bg: active ? accent : surf, fg: active ? bg : ink,
+      bd: active ? accent : 'rgba(32,30,29,0.45)', press: press
+    });
+    const opKeys = [
+      op('繰り返し開始', ()=>this.repStart(), s.repFrom !== null),
+      op('繰り返し終了', ()=>this.repEnd(), false),
+      op('段を終える', ()=>this.finishRound(), false),
+      op('1目削除', ()=>this.delOne(), false)
+    ];
+    const big = (o) => Object.assign({hasSym:false, d:this.D.sc, fill:'none', fg:ink, bd:'rgba(32,30,29,0.5)', bg:bg}, o);
+    const thumbBig = [
+      big({name:'細編み', hasSym:true, press:()=>this.pressStitch('sc')}),
+      big({name:(p.mode==='inc'?p.n:2)+'目編み入れる', bg:p.mode==='inc'?accent:bg, fg:p.mode==='inc'?bg:ink, bd:p.mode==='inc'?accent:'rgba(32,30,29,0.5)', press:()=>this.tapMod('inc')}),
+      big({name:(p.mode==='dec'?p.n:2)+'目一度', bg:p.mode==='dec'?accent:bg, fg:p.mode==='dec'?bg:ink, bd:p.mode==='dec'?accent:'rgba(32,30,29,0.5)', press:()=>this.tapMod('dec')}),
+      big({name:'段を終える', bg:ink, fg:bg, bd:ink, press:()=>this.finishRound()})
+    ];
+    const thumbRest = ['ch','slst','hdc','dc','tr'].map(t=>({
+      label: this.T[t], bg: bg, fg: ink, bd: 'rgba(32,30,29,0.4)', press: ()=>this.pressStitch(t)
+    })).concat([mod('bundle','束に',p.bundle), mod('skip','飛ばす',false), mod('rest','残りすべてに',p.rest)]);
+
+    const yarnObj = this.YARNS.filter(y=>y.id===s.yarn)[0] || this.YARNS[0];
+    const selSt = s.sel ? (rounds[s.sel.ri] && rounds[s.sel.ri].stitches[s.sel.si]) : null;
+    const repUnit = s.repFrom !== null ? openRound.stitches.slice(s.repFrom) : [];
+
+    return {
+      tabsOn: vm === 'tabs',
+      tabs: [
+        {name:'図', press:()=>this.setState({tab:'chart'}), bg: s.tab==='chart'?bg:'transparent', fg: s.tab==='chart'?ink:'rgba(32,30,29,0.55)', bd: s.tab==='chart'?accent:'transparent'},
+        {name:'目数表', press:()=>this.setState({tab:'table'}), bg: s.tab==='table'?bg:'transparent', fg: s.tab==='table'?ink:'rgba(32,30,29,0.55)', bd: s.tab==='table'?accent:'transparent'}
+      ],
+      chartOn: vm === 'split' || vm === 'sheet' || (vm === 'tabs' && s.tab === 'chart'),
+      tableInline: vm === 'split' || (vm === 'tabs' && s.tab === 'table'),
+      chartFlex: vm === 'split' ? '1.55' : '1',
+      tableFlex: '1',
+      sheetBtnOn: vm === 'sheet',
+      sheetOn: vm === 'sheet' && s.sheet,
+      openSheet: () => this.setState({sheet:true}),
+      closeSheet: () => this.setState({sheet:false}),
+      stop: (e) => e.stopPropagation(),
+
+      guides: g.guides, syms: g.syms, joins: g.joins, works: g.works,
+      rlabels: g.rlabels, selMarks: g.selMarks,
+      hlOn: !!g.hl, hlX: g.hl ? g.hl.x : 0, hlY: g.hl ? g.hl.y : 0,
+      panT: 'translate(' + s.pan.x.toFixed(1) + ',' + s.pan.y.toFixed(1) + ') scale(' + s.pan.s.toFixed(2) + ')',
+      panDown: this.panDown, panMove: this.panMove, panUp: this.panUp, wheel: this.wheel,
+      zoomIn: () => this.zoom(1.18), zoomOut: () => this.zoom(0.85),
+      zoomReset: () => this.setState({pan:{x:0,y:0,s:0.78}}),
+
+      tableRows: tableRows,
+      curLabel: openRound.n + '段目',
+      progA: g.prev ? '前段' + g.prev + '目中 ' + g.consumed + '目拾った' : '作り目に編み始め',
+      progB: 'この段 ' + this.producedOf(openRound) + '目',
+      progPct: g.prev ? Math.min(100, Math.round(g.consumed / g.prev * 100)) : 0,
+      fracBig: g.consumed + '/' + (g.prev || '—'),
+      curItems: items, tailItems: items.slice(-3),
+      crChips: cr === 'chips', crTicker: cr === 'ticker', crCompact: cr === 'compact',
+
+      kbGrid: kb === 'grid', kbRows: kb === 'rows', kbThumb: kb === 'thumb',
+      stitchKeys: stitchKeys, modKeys: modKeys, opKeys: opKeys,
+      thumbBig: thumbBig, thumbRest: thumbRest, thumbOps: [opKeys[0], opKeys[1], opKeys[3]],
+
+      undo: () => this.undo(), redo: () => this.redo(),
+      undoBd: s.hist.length ? 'rgba(32,30,29,0.45)' : 'rgba(32,30,29,0.2)',
+      redoBd: s.fut.length ? 'rgba(32,30,29,0.45)' : 'rgba(32,30,29,0.2)',
+      undoOp: s.hist.length ? '1' : '0.35',
+      redoOp: s.fut.length ? '1' : '0.35',
+
+      yarnColor: yarnObj.color, yarnName: yarnObj.name,
+      yarnOn: s.yarnSheet,
+      yarnRows: this.YARNS.map(y=>({
+        name:y.name, memo:y.memo, color:y.color,
+        now: y.id === s.yarn ? '使用中' : '',
+        bg: y.id === s.yarn ? 'rgba(236,48,19,0.08)' : 'transparent',
+        press: () => this.setState({yarn:y.id, yarnSheet:false, menu:false})
+      })),
+      openYarn: () => this.setState({yarnSheet:true, menu:false}),
+      closeYarn: () => this.setState({yarnSheet:false}),
+      menuOn: s.menu,
+      toggleMenu: () => this.setState(st=>({menu:!st.menu})),
+      closeMenu: () => this.setState({menu:false}),
+
+      selOn: !!selSt,
+      selLabel: selSt ? this.label(selSt) : '',
+      selRepOn: !!(selSt && selSt.rep),
+      unrep: () => {
+        const sel = s.sel;
+        this.mut(rounds=>{
+          const arr = rounds[sel.ri].stitches, gid = arr[sel.si] && arr[sel.si].rep;
+          if (gid) arr.forEach(st=>{ if (st.rep === gid) delete st.rep; });
+        });
+        this.setState({sel:null});
+      },
+      delSel: () => { const sel = s.sel; this.mut(rounds=>{ rounds[sel.ri].stitches.splice(sel.si,1); }); this.setState({sel:null}); },
+      clearSel: () => this.setState({sel:null}),
+
+      repAskOn: s.repAsk,
+      repSummary: repUnit.length ? '繰り返す単位：' + repUnit.map(st=>this.label(st)).join('、') : '繰り返す目がありません',
+      repPreview: repUnit.length ? '（' + repUnit.map(st=>this.label(st)).join('、') + '）×' + s.repCount : '',
+      repCount: String(s.repCount),
+      repDec: () => this.setRep(s.repCount - 1),
+      repInc: () => this.setRep(s.repCount + 1),
+      repType: (e) => this.setRep(parseInt(e.target.value, 10) || 2),
+      repApply: () => this.applyRep(s.repCount),
+      repApplyLabel: 'この単位を×' + s.repCount + 'で繰り返す',
+      repRest: () => this.applyRep('end'),
+      repOpts: [2,3,4,6,8,12].map(c=>({
+        label: '×' + c,
+        bg: s.repCount === c ? accent : 'transparent',
+        fg: s.repCount === c ? bg : ink,
+        press: () => this.setRep(c)
+      })),
+      cancelRep: () => this.setState({repAsk:false}),
+
+      dlgOn: !!s.dlg,
+      dlgOver: !!(s.dlg && s.dlg.over),
+      dlgQuietOn: !!(s.dlg && !s.dlg.over),
+      dlgKicker: s.dlg && s.dlg.over ? '拾いすぎています' : '段を終える',
+      dlgMsg: s.dlg
+        ? (s.dlg.over
+          ? '前段' + s.dlg.prev + '目に対して' + s.dlg.consumed + '目拾っています。'
+          : '前段' + s.dlg.prev + '目のうち、あと' + s.dlg.left + '目残っています。')
+        : '',
+      dlgQuiet: () => this.closeRound('quiet'),
+      dlgWarn: () => this.closeRound('warn'),
+      dlgCancel: () => this.setState({dlg:null})
+    };
+  }
+}
+</script>
+</body>
+</html>
