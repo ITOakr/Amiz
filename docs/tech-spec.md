@@ -78,6 +78,48 @@
 - 保存用のモデルとの変換は、6章の JSON 変換で行う
 - テストは `swift test` で実行する（シミュレーター不要）
 
+**モデル層の型**（`Sources/CrochetCore/Model/`。フェーズ1-1 で決定）
+
+| 型 | 内容 | 対応する仕様 |
+|---|---|---|
+| `Pattern` | 編み図全体。`schemaVersion`、編み方、作り目、段の配列。`jsonData()` / `init(jsonData:)` で JSON と変換 | 5-4、6章 |
+| `WorkingMethod` | 編み方：`flat`（往復編み）／`joinedRounds`（輪編み）／`spiral`（螺旋編み） | domain 5 |
+| `FoundationKind` | 作り目：`magicRing`／`chain(stitchCount:)`。値は「1段目に編む目数」 | domain 33 |
+| `Row` | 段。`id` と手順 `steps` | domain 21 |
+| `Step` | 手順の1操作。`id` と `kind` | domain 21 |
+| `StepKind` | 操作の種類：`turningChain`／`stitch`／`increase`／`decrease`／`skip`／`leaveRemaining`／`closeRound`／`repeatGroup` | domain 21 |
+| `StitchKind` | 目の種類6つ。図での高さと立ち上がりの初期値を持つ | domain 1、6 |
+| `Placement` | 編み入れ先：`stitch`（前段の目の頭）／`chainSpace`（束） | domain 3 |
+| `RepeatCount` | 繰り返しの回数：`times(n)`／`untilEnd` | domain 15、17 |
+| `StitchRef` | 展開後の1目を指す：段ID・操作ID・何回目・操作内の何目め | 5-3 |
+
+- 「操作」は Foundation の `Operation` と、「作り目」は `Foundation` と名前が衝突するため、`Step`・`FoundationKind` にしている
+- 画面のボタン1回＝1つの `Step` を原則にする（鎖編みを3回押せば `stitch(.chain)` が3つ並ぶ）。「n目編み入れる」「n目一度」と立ち上がりだけが数を持つ
+- 「残りすべてに◯」は、単位が1つで回数が `untilEnd` の `repeatGroup` として表す
+- `repeatGroup` の単位に `repeatGroup` を入れる（入れ子）ことは型の上では可能だが使わない。`count ≧ 2` などの条件も型では縛らず、計算層の検証で扱う
+
+**JSON の形**：操作は `type` で種類を見分ける平らな形にする。自動生成に任せず自分で変換を書く（自動生成だと `_0` のようなキーになり、型名の変更で古いデータが読めなくなるため）。`type` や列挙の文字列は保存形式の一部なので変更しない。
+
+```json
+{
+  "schemaVersion": 1,
+  "method": "joinedRounds",
+  "foundation": { "type": "magicRing" },
+  "rows": [
+    { "id": "…", "steps": [
+      { "id": "…", "type": "turningChain", "chains": 1 },
+      { "id": "…", "type": "repeat", "count": 6, "unit": [
+        { "id": "…", "type": "stitch",   "stitch": "singleCrochet", "into": "stitch" },
+        { "id": "…", "type": "increase", "stitch": "singleCrochet", "count": 2, "into": "stitch" }
+      ]},
+      { "id": "…", "type": "closeRound" }
+    ]}
+  ]
+}
+```
+
+その他の操作：`{"type":"decrease","stitch":"singleCrochet","count":2}`、`{"type":"skip"}`、`{"type":"leaveRemaining"}`。段の終わりまでの繰り返しは `"count": "untilEnd"`。鎖の作り目は `{"type":"chain","stitchCount":20}`。
+
 **SwiftData を import しない理由**
 - 目の順番を確実に扱うため。SwiftData の関連データの配列は、保存・読み込みで順番が保証されない。段の中の目の順番がすべてのこのアプリでは、並び順の管理があらゆる処理に入り込んでしまう
 - 元に戻す（9章）を、値型のデータのコピーで実現するため。`@Model` はクラス（参照型）にしか付けられない

@@ -17,7 +17,7 @@ struct ContentView: View {
                 .imageScale(.large)
                 .foregroundStyle(.tint)
             Text("Hello, world!")
-            Text("\(CrochetCoreInfo.name) を読み込みました")
+            Text("編み図データ形式 v\(Pattern.currentSchemaVersion)")
         }
         .padding()
     }
