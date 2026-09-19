@@ -6,7 +6,10 @@
 //
 
 import SwiftUI
+import CrochetCore
 
+// テンプレートの仮画面。CrochetCore パッケージがアプリから使えることの確認を兼ねている。
+// フェーズ2で編集画面に置き換える。
 struct ContentView: View {
     var body: some View {
         VStack {
@@ -14,6 +17,7 @@ struct ContentView: View {
                 .imageScale(.large)
                 .foregroundStyle(.tint)
             Text("Hello, world!")
+            Text("\(CrochetCoreInfo.name) を読み込みました")
         }
         .padding()
     }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A6E18402305D953C005B33AD /* CrochetCore in Frameworks */ = {isa = PBXBuildFile; productRef = A6E18401305D953C005B33AD /* CrochetCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A6E18327305D953C005B33AD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6E18402305D953C005B33AD /* CrochetCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = Amiz;
 			packageProductDependencies = (
+				A6E18401305D953C005B33AD /* CrochetCore */,
 			);
 			productName = Amiz;
 			productReference = A6E18319305D9539005B33AD /* Amiz.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = A6E18310305D9539005B33AD;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A6E18400305D953C005B33AD /* XCLocalSwiftPackageReference "CrochetCore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A6E1831A305D9539005B33AD /* Products */;
 			projectDirPath = "";
@@ -570,6 +579,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A6E18400305D953C005B33AD /* XCLocalSwiftPackageReference "CrochetCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = CrochetCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A6E18401305D953C005B33AD /* CrochetCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CrochetCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A6E18311305D9539005B33AD /* Project object */;
 }
