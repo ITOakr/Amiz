@@ -52,10 +52,21 @@ struct EditorView: View {
             Divider()
             CurrentRowView(model: model)
             Divider()
+            if model.selection != nil {
+                SelectionBar(model: model)
+                Divider()
+            }
             StitchKeyboardView(model: model)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .alert("修正の確認", isPresented: isConfirmationPresented) {
+            Button("上の段を残す") { model.resolveConfirmation(keepingRowsAbove: true) }
+            Button("上の段をほどく", role: .destructive) { model.resolveConfirmation(keepingRowsAbove: false) }
+            Button("キャンセル", role: .cancel) { model.cancelConfirmation() }
+        } message: {
+            Text(model.pendingConfirmation?.message ?? "")
+        }
         .onChange(of: autoTurningChain, initial: true) { _, isOn in
             model.autoTurningChain = isOn
         }
@@ -78,6 +89,14 @@ struct EditorView: View {
             guard !Task.isCancelled else { return }
             onPatternChange(pattern)
         }
+    }
+
+    /// 修正の確認ダイアログ（ui-spec 7-1）の表示状態
+    private var isConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { model.pendingConfirmation != nil },
+            set: { if !$0 { model.cancelConfirmation() } }
+        )
     }
 
     // MARK: - ツールバー（E）
@@ -128,7 +147,9 @@ struct EditorView: View {
             layout: model.layout,
             currentRowIndex: model.currentRowIndex,
             highlighted: model.nextStitchToPick,
-            showsRowNumbers: showsRowNumbers
+            selected: model.selectedStitch,
+            showsRowNumbers: showsRowNumbers,
+            onTapStitch: { model.select($0.ref) }
         )
         .overlay(alignment: .topLeading) {
             // 凡例（モックに合わせる）

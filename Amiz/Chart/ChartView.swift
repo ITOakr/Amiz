@@ -11,6 +11,8 @@ struct ChartView: View {
     var currentRowIndex: Int?
     /// 次に拾う前段の目（ハイライト）
     var highlighted: LaidOutStitch?
+    /// 選択中の目（U15）
+    var selected: LaidOutStitch?
     var showsRowNumbers = true
     /// 目をタップしたとき（選択の操作はフェーズ4）
     var onTapStitch: ((LaidOutStitch) -> Void)?
@@ -60,6 +62,8 @@ struct ChartView: View {
             let scaled = transform.apply(to: stitch)
             if let highlighted, stitch.ref == highlighted.ref {
                 StitchSymbol.draw(scaled, in: &context, color: .red, style: highlightStyle)
+            } else if let selected, stitch.ref == selected.ref {
+                StitchSymbol.draw(scaled, in: &context, color: .orange, style: highlightStyle)
             } else {
                 let isCurrent = stitch.rowIndex == currentRowIndex
                 StitchSymbol.draw(scaled, in: &context, color: isCurrent ? .accentColor : .primary, style: style)

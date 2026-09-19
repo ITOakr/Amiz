@@ -154,4 +154,82 @@ struct EditorModelTests {
         #expect(model.pattern.rows[0].steps.count == 2)
         #expect(model.pattern.rows[0].steps[0].kind == .turningChain(chains: 1))
     }
+
+    @Test("選択：入力中の段の目は確認なしで種類を変えられ、削除もできる")
+    func selectionInCurrentRow() {
+        let model = EditorModel()
+        for _ in 0..<3 { model.pressStitch(.singleCrochet) }
+        let row = model.pattern.rows[0]
+        let ref = StitchRef(rowID: row.id, stepID: row.steps[2].id)
+
+        model.select(ref)
+        #expect(model.selection == ref)
+        #expect(model.selectionDescription == "細編み（1段目）")
+
+        // 目ボタンで種類の変更（追加ではない）
+        model.pressStitch(.doubleCrochet)
+        #expect(model.pattern.rows[0].steps.count == 4)  // 立ち上がり + 3目のまま
+        #expect(model.pattern.rows[0].steps[2].kind == .stitch(.doubleCrochet))
+        #expect(model.selection == ref)  // 種類の変更では選択が残る
+        #expect(model.pendingConfirmation == nil)
+
+        model.request(.delete)
+        #expect(model.pattern.rows[0].steps.count == 3)
+        #expect(model.selection == nil)
+
+        // 元に戻すで戻る
+        model.undo()
+        #expect(model.pattern.rows[0].steps.count == 4)
+    }
+
+    @Test("選択：過去の段で目数が変わる編集は確認待ちになり、残す／ほどくで結果が分かれる")
+    func selectionInPastRowNeedsConfirmation() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+        let row1 = model.pattern.rows[0]
+        model.select(StitchRef(rowID: row1.id, stepID: row1.steps[1].id))
+
+        // 1段目の細編みを消す → 6目→5目、2〜5段目に影響
+        model.request(.delete)
+        #expect(model.pendingConfirmation != nil)
+        #expect(model.pendingConfirmation?.message == "1段目の目数が6目から5目に変わりました。2〜5段目に影響があります。")
+        #expect(model.pattern.rows[0].steps.count == 8)  // まだ変わっていない
+
+        // キャンセル → 何も変わらない
+        model.cancelConfirmation()
+        #expect(model.pendingConfirmation == nil)
+        #expect(model.pattern.rows[0].steps.count == 8)
+
+        // もう一度 → 上の段を残す
+        model.request(.delete)
+        model.resolveConfirmation(keepingRowsAbove: true)
+        #expect(model.pattern.rows.count == 5)
+        #expect(model.expansion.rows.map(\.totalCount) == [5, 10, 18, 24, 4])
+        #expect(model.warnings.map(\.rowNumber) == [3])
+        #expect(model.selection == nil)
+
+        // やり直しの履歴ではなく元に戻す：1回で戻る
+        model.undo()
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 24, 4])
+
+        // 上の段をほどく
+        model.select(StitchRef(rowID: row1.id, stepID: row1.steps[1].id))
+        model.request(.delete)
+        model.resolveConfirmation(keepingRowsAbove: false)
+        #expect(model.pattern.rows.count == 1)
+        #expect(model.expansion.rows.map(\.totalCount) == [5])
+    }
+
+    @Test("選択：TC-5 の画面版。過去の段の細編みを中長編みにしても確認は出ない")
+    func selectionTC5() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+        guard case .repeatGroup(let unit, _) = model.pattern.rows[2].steps[1].kind else { Issue.record("繰り返しのはず"); return }
+        model.select(StitchRef(rowID: model.pattern.rows[2].id, stepID: unit[0].id))
+        #expect(model.selectionIsInRepeat)
+
+        model.pressStitch(.halfDoubleCrochet)
+        #expect(model.pendingConfirmation == nil)
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 24, 4])
+        #expect(model.warnings.isEmpty)
+        #expect(model.expansion.rows[2].stitches.filter { $0.kind == .halfDoubleCrochet }.count == 6)
+    }
 }
