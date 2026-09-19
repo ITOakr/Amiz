@@ -52,6 +52,35 @@ final class EditorModel {
     var canRedo: Bool { !redoStack.isEmpty }
     var isRepeating: Bool { repeatStartIndex != nil }
 
+    /// 入力中の段の操作の列
+    var currentRowSteps: [Step] {
+        currentRowIndex.map { pattern.rows[$0].steps } ?? []
+    }
+
+    /// 直前に編んだ操作の表記（「現在の段」に並べる。ui-spec 5-5）
+    func recentStepLabels(count: Int) -> [String] {
+        currentRowSteps.suffix(count).map(StitchTableFormatter.label)
+    }
+
+    /// 目数表の行（入力中の段を除く。同じ内容の段はまとめる。ui-spec 5-4）
+    var finishedTableRows: [StitchTableRow] {
+        guard let current = currentRowIndex else { return [] }
+        var finished = pattern
+        finished.rows.removeLast()
+        let finishedExpansion = PatternExpansion(rows: Array(expansion.rows[..<current]))
+        return StitchTableFormatter.tableRows(for: finished, expansion: finishedExpansion, warnings: warnings)
+    }
+
+    /// 段の位置ごとの警告（目数表で引く）
+    var warningsByRowIndex: [Int: RowWarning] {
+        Dictionary(uniqueKeysWithValues: warnings.map { ($0.rowIndex, $0) })
+    }
+
+    /// 作り目の行の文章（「わの作り目」「作り目：鎖21目」）
+    var foundationText: String {
+        StitchTableFormatter.foundationText(for: pattern)
+    }
+
     /// 「繰り返し終了」で「段の終わりまで」を選べるか
     var canEndRepeatUntilEnd: Bool {
         guard let unit = pendingRepeatUnit else { return false }
