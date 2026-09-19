@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A6E18402305D953C005B33AD /* CrochetCore in Frameworks */ = {isa = PBXBuildFile; productRef = A6E18401305D953C005B33AD /* CrochetCore */; };
+		A6E18404305D953C005B33AD /* CrochetCore in Frameworks */ = {isa = PBXBuildFile; productRef = A6E18403305D953C005B33AD /* CrochetCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6E18404305D953C005B33AD /* CrochetCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -141,6 +143,7 @@
 			);
 			name = AmizTests;
 			packageProductDependencies = (
+				A6E18403305D953C005B33AD /* CrochetCore */,
 			);
 			productName = AmizTests;
 			productReference = A6E18326305D953C005B33AD /* AmizTests.xctest */;
@@ -589,6 +592,10 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		A6E18401305D953C005B33AD /* CrochetCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CrochetCore;
+		};
+		A6E18403305D953C005B33AD /* CrochetCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CrochetCore;
 		};
