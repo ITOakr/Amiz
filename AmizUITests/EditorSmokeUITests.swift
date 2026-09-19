@@ -58,7 +58,8 @@ final class EditorSmokeUITests: XCTestCase {
         app.buttons["op.finishRow"].tap()
         XCTAssertTrue(app.staticTexts["6段目・この段 0目"].waitForExistence(timeout: 2))
 
-        // 目数表（ui-spec 8章のサンプルと TC-1）。画面外の行は作られないので、上下にスクロールして確かめる
+        // 目数表（ui-spec 8章のサンプルと TC-1）。図タブから切り替え、画面外の行は作られないので上下にスクロールして確かめる
+        app.buttons["目数表"].tap()
         let table = app.collectionViews.firstMatch
         XCTAssertTrue(table.waitForExistence(timeout: 2))
         for text in ["（細編み2目、細編み2目編み入れる）×6", "24目", "残りの目すべてに細編み", "入力中"] {
@@ -101,6 +102,7 @@ final class EditorSmokeUITests: XCTestCase {
         finish.tap()
         XCTAssertTrue(alert.waitForExistence(timeout: 2))
         alert.buttons["このまま終える"].tap()
+        app.buttons["目数表"].tap()
         XCTAssertTrue(app.staticTexts["前段6目のうち3目しか拾っていません"].waitForExistence(timeout: 2))
 
         // 3段目：2目編んで 残りは編まない → 警告なし
