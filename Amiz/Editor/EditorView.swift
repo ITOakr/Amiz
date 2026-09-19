@@ -107,10 +107,6 @@ struct EditorView: View {
                     .disabled(true)
                 Button("書き出し", systemImage: "square.and.arrow.up") {}
                     .disabled(true)
-                Divider()
-                // 設定画面（フェーズ4-7）ができるまでの仮置き
-                Toggle("立ち上がりの鎖を自動で入れる", isOn: $autoTurningChain)
-                Toggle("図に段番号を表示", isOn: $showsRowNumbers)
             }
             .accessibilityIdentifier("toolbar.more")
         }
