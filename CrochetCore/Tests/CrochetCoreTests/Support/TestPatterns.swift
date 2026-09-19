@@ -41,4 +41,40 @@ enum TestPatterns {
             ]),
         ])
     }
+
+    /// 「前段 n 目」を用意するための1段目（わの作り目に細編み n 目）と、その上に test 用の段を1つ載せた編み図
+    static func afterRound(of previousCount: Int, row: Row) -> Pattern {
+        Pattern(method: .joinedRounds, foundation: .magicRing, rows: [
+            Row(steps: [.turningChain(1)] + stitches(.singleCrochet, previousCount) + [.closeRound()]),
+            row,
+        ])
+    }
+
+    /// TC-3 長編みの段の立ち上がり：前段12目に「立ち上がり鎖3目、長編み11目、引き抜き」
+    static func tc3() -> Pattern {
+        afterRound(of: 12, row: Row(steps: [.turningChain(3)] + stitches(.doubleCrochet, 11) + [.closeRound()]))
+    }
+
+    /// TC-4 鎖を含む段：前段12目に「立ち上がり鎖3目、鎖2目、（長編み1目、鎖2目）×11、引き抜き」
+    static func tc4() -> Pattern {
+        afterRound(of: 12, row: Row(steps: [
+            .turningChain(3),
+            .stitch(.chain), .stitch(.chain),
+            .repeating([.stitch(.doubleCrochet), .stitch(.chain), .stitch(.chain)], times: 11),
+            .closeRound(),
+        ]))
+    }
+
+    /// TC-6 割り切れない場合：前段13目に「（細編み1目、増し目）を段の終わりまで」
+    static func tc6(leaveRemaining: Bool = false) -> Pattern {
+        var steps: [Step] = [
+            .turningChain(1),
+            .untilEnd([.stitch(.singleCrochet), .increase(.singleCrochet)]),
+        ]
+        if leaveRemaining {
+            steps.append(.leaveRemaining())
+        }
+        steps.append(.closeRound())
+        return afterRound(of: 13, row: Row(steps: steps))
+    }
 }
