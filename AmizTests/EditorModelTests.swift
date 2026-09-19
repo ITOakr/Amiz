@@ -103,6 +103,46 @@ struct EditorModelTests {
         #expect(model.pattern.rows[2].steps.count == 1)  // 立ち上がりだけ残る
     }
 
+    @Test("段を終える前の確認：前段に目が残っていればその数、使い切っていれば nil")
+    func remainingBeforeFinish() {
+        let model = EditorModel()
+        for _ in 0..<6 { model.pressStitch(.singleCrochet) }
+        #expect(model.remainingBeforeFinish == nil)  // わの作り目の1段目は前段がない
+        #expect(!model.hasUsedUpPreviousRow)
+        model.pressFinishRow()
+
+        for _ in 0..<3 { model.pressStitch(.singleCrochet) }
+        #expect(model.remainingBeforeFinish == 3)
+        #expect(!model.hasUsedUpPreviousRow)
+
+        for _ in 0..<3 { model.pressStitch(.singleCrochet) }
+        #expect(model.remainingBeforeFinish == nil)
+        #expect(model.hasUsedUpPreviousRow)
+
+        model.pressStitch(.singleCrochet)  // 拾いすぎ
+        #expect(model.remainingBeforeFinish == nil)
+        #expect(model.hasUsedUpPreviousRow)
+        model.pressFinishRow()
+        #expect(model.warnings.map(\.message) == ["前段6目に対して7目拾っています"])
+    }
+
+    @Test("「残りは編まない」で段を終えると警告が出ず、1回の元に戻すで取り消せる")
+    func finishRowLeavingRemaining() {
+        let model = EditorModel()
+        for _ in 0..<6 { model.pressStitch(.singleCrochet) }
+        model.pressFinishRow()
+        for _ in 0..<3 { model.pressStitch(.singleCrochet) }
+
+        model.pressFinishRow(leavingRemaining: true)
+        #expect(model.warnings.isEmpty)
+        #expect(model.pattern.rows.count == 3)
+        #expect(model.pattern.rows[1].steps.contains { $0.kind == .leaveRemaining })
+
+        model.undo()
+        #expect(model.pattern.rows.count == 2)
+        #expect(!model.pattern.rows[1].steps.contains { $0.kind == .leaveRemaining })
+    }
+
     @Test("立ち上がりの自動入力をオフにすると入らない")
     func autoTurningChainOff() {
         let model = EditorModel()

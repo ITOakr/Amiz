@@ -73,4 +73,52 @@ final class EditorSmokeUITests: XCTestCase {
         app.buttons["op.deleteLast"].tap()
         XCTAssertTrue(app.staticTexts["5段目・この段 24目"].waitForExistence(timeout: 2))
     }
+
+    /// 段を終えるときの確認（ui-spec 7-2）と拾いすぎ（domain-spec 23）
+    @MainActor
+    func testFinishRowConfirmation() {
+        let app = XCUIApplication()
+        app.launch()
+
+        let singleCrochet = app.buttons["stitch.singleCrochet"]
+        XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
+        let finish = app.buttons["op.finishRow"]
+
+        // 1段目：6目
+        for _ in 0..<6 { singleCrochet.tap() }
+        finish.tap()
+
+        // 2段目：3目だけ編んで終える → 確認 → 戻って続ける
+        for _ in 0..<3 { singleCrochet.tap() }
+        finish.tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        XCTAssertTrue(alert.staticTexts["前段6目のうち、あと3目残っています。"].exists)
+        alert.buttons["戻って続ける"].tap()
+        XCTAssertTrue(app.staticTexts["2段目・この段 3目"].waitForExistence(timeout: 2))
+
+        // このまま終える → 目数表に警告
+        finish.tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        alert.buttons["このまま終える"].tap()
+        XCTAssertTrue(app.staticTexts["前段6目のうち3目しか拾っていません"].waitForExistence(timeout: 2))
+
+        // 3段目：2目編んで 残りは編まない → 警告なし
+        singleCrochet.tap()
+        singleCrochet.tap()
+        finish.tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        alert.buttons["残りは編まない"].tap()
+        XCTAssertTrue(app.staticTexts["4段目・この段 0目"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["前段3目のうち2目しか拾っていません"].exists)
+
+        // 4段目：前段2目を使い切ると表示が出て、さらに編んで終えると確認なしで拾いすぎの警告
+        singleCrochet.tap()
+        singleCrochet.tap()
+        XCTAssertTrue(app.staticTexts["前段を使い切りました"].waitForExistence(timeout: 2))
+        singleCrochet.tap()
+        finish.tap()
+        XCTAssertFalse(alert.exists)
+        XCTAssertTrue(app.staticTexts["前段2目に対して3目拾っています"].waitForExistence(timeout: 2))
+    }
 }

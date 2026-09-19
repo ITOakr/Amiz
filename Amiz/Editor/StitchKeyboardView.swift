@@ -11,6 +11,8 @@ struct StitchKeyboardView: View {
     /// 「繰り返し終了」の確認と回数入力
     @State private var isRepeatEndPresented = false
     @State private var repeatCountText = "6"
+    /// 「段を終える」の確認（ui-spec 7-2）。前段に残っている目の数
+    @State private var remainingToConfirm: Int?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -36,6 +38,36 @@ struct StitchKeyboardView: View {
             Button("キャンセル", role: .cancel) {}
         } message: {
             Text("『\(pendingRepeatText)』を繰り返します")
+        }
+        .alert("段を終えますか？", isPresented: isFinishConfirmPresented) {
+            Button("残りは編まない") {
+                model.pressFinishRow(leavingRemaining: true)
+            }
+            Button("このまま終える") {
+                model.pressFinishRow()
+            }
+            Button("戻って続ける", role: .cancel) {}
+        } message: {
+            if let remaining = remainingToConfirm, let previous = model.currentRow?.previousCount {
+                Text("前段\(previous)目のうち、あと\(remaining)目残っています。")
+            }
+        }
+    }
+
+    /// 確認ダイアログの表示状態（残っている目の数があるときだけ出す）
+    private var isFinishConfirmPresented: Binding<Bool> {
+        Binding(
+            get: { remainingToConfirm != nil },
+            set: { if !$0 { remainingToConfirm = nil } }
+        )
+    }
+
+    /// 「段を終える」：前段に目が残っていれば確認を出し、拾いすぎや過不足なしならそのまま終える（ui-spec 5-6・7-2）
+    private func finishRow() {
+        if let remaining = model.remainingBeforeFinish {
+            remainingToConfirm = remaining
+        } else {
+            model.pressFinishRow()
         }
     }
 
@@ -123,7 +155,7 @@ struct StitchKeyboardView: View {
             .accessibilityIdentifier("op.endRepeat")
 
             OperationButton(title: "段を終える") {
-                model.pressFinishRow()
+                finishRow()
             }
             .accessibilityIdentifier("op.finishRow")
 
