@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode（個人ごとの設定・ビルド生成物）
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.xcscmblueprint
+*.xccheckout
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager（CrochetCore のビルド生成物と Xcode 用の個人設定）
+.build/
+.swiftpm/
+
+# Claude Code のローカル設定
+.claude/settings.local.json
