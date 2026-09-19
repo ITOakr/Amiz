@@ -7,6 +7,8 @@ import CrochetCore
 /// 目ボタンの記号は `StitchSymbolView` で描く。
 struct StitchKeyboardView: View {
     let model: EditorModel
+    /// iPad の右レール用に大きく（目ボタン 96pt 角、記号も大きく。ui-spec 5-2）
+    var isLarge = false
 
     /// 「繰り返し終了」の確認と回数入力
     @State private var isRepeatEndPresented = false
@@ -15,11 +17,12 @@ struct StitchKeyboardView: View {
     @State private var remainingToConfirm: Int?
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: isLarge ? 12 : 8) {
             stitchGroup
             modifierGroup
             rowOperationGroup
         }
+        .environment(\.keyboardButtonHeight, isLarge ? 60 : 48)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color(.secondarySystemBackground))
@@ -80,11 +83,11 @@ struct StitchKeyboardView: View {
                     model.pressStitch(kind)
                 } label: {
                     VStack(spacing: 4) {
-                        StitchSymbolView(kind: kind, size: 30)
+                        StitchSymbolView(kind: kind, size: isLarge ? 44 : 30)
                         Text(kind.japaneseName)
-                            .font(.caption)
+                            .font(isLarge ? .subheadline : .caption)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 64)
+                    .frame(maxWidth: .infinity, minHeight: isLarge ? 96 : 64)
                 }
                 .buttonStyle(.bordered)
                 .tint(.primary)
@@ -196,6 +199,7 @@ private struct ModifierButton: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
+    @Environment(\.keyboardButtonHeight) private var height
 
     var body: some View {
         Button(action: action) {
@@ -203,7 +207,7 @@ private struct ModifierButton: View {
                 .font(.caption)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity, minHeight: 48)
+                .frame(maxWidth: .infinity, minHeight: height)
         }
         .buttonStyle(.bordered)
         .tint(isSelected ? .accentColor : .primary)
@@ -227,13 +231,26 @@ private struct OperationButton: View {
 
 private struct OperationLabel: View {
     let title: String
+    @Environment(\.keyboardButtonHeight) private var height
 
     var body: some View {
         Text(title)
             .font(.caption)
             .lineLimit(2)
             .minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity, minHeight: 48)
+            .frame(maxWidth: .infinity, minHeight: height)
+    }
+}
+
+/// 先に選ぶボタン・段の操作ボタンの高さ（iPad の右レールでは大きくする）
+private struct KeyboardButtonHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 48
+}
+
+extension EnvironmentValues {
+    fileprivate var keyboardButtonHeight: CGFloat {
+        get { self[KeyboardButtonHeightKey.self] }
+        set { self[KeyboardButtonHeightKey.self] = newValue }
     }
 }
 

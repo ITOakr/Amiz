@@ -43,7 +43,9 @@
 - CrochetCore のテスト：`swift test --package-path CrochetCore`
 - UI テスト（通常は走らせない。画面の操作を通しで確認したいときだけ）：`xcodebuild test -project Amiz.xcodeproj -scheme AmizUITests -destination 'platform=iOS Simulator,name=iPhone 17'`
 
-`xcodebuild` の出力は長いので、結果だけ見るときは `| grep -E "SUCCEEDED|FAILED|error:"` を付ける。iPad で確認するときは `name=iPad Pro 11-inch (M5)` にする。
+`xcodebuild` の出力は長いので、結果だけ見るときは `| grep -E "SUCCEEDED|FAILED|error:"` を付ける。iPad で確認するときは `name=iPad Pro 11-inch (M5)` にする（iPad の配置の UI テスト `IPadLayoutUITests` は iPad でだけ動き、iPhone では飛ばされる）。
+
+確認用の起動：環境変数 `AMIZ_SCREEN` に `sample`（くまの頭）／`motif`（花のモチーフ）／`big`（40段）／`symbols`（記号一覧）を渡すと、保存しないサンプルでその画面が開く（`SIMCTL_CHILD_AMIZ_SCREEN=sample xcrun simctl launch <UDID> com.akira.Amiz`、または Xcode のスキームの環境変数）。
 
 ## Jira 運用
 
