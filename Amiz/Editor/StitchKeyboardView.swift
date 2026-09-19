@@ -4,7 +4,7 @@ import CrochetCore
 /// 編み目キーボード（ui-spec 5-6 の D）。3つのグループを縦に並べる。
 ///
 /// ボタンは `EditorModel` の `press…` を呼ぶだけで、編み図の変更はモデル側が行う。
-/// 記号はフェーズ3で Path 描画に置き換えるまで、文字で仮に表す。
+/// 目ボタンの記号は `StitchSymbolView` で描く。
 struct StitchKeyboardView: View {
     let model: EditorModel
 
@@ -80,8 +80,7 @@ struct StitchKeyboardView: View {
                     model.pressStitch(kind)
                 } label: {
                     VStack(spacing: 4) {
-                        Text(Self.placeholderSymbol(for: kind))
-                            .font(.title2.weight(.semibold))
+                        StitchSymbolView(kind: kind, size: 30)
                         Text(kind.japaneseName)
                             .font(.caption)
                     }
@@ -188,18 +187,6 @@ struct StitchKeyboardView: View {
 
     private var pendingRepeatText: String {
         (model.pendingRepeatUnit ?? []).map(StitchTableFormatter.label).joined(separator: "・")
-    }
-
-    /// 記号の仮表示（ui-spec 1章のモックでの簡易表現に合わせた文字）
-    static func placeholderSymbol(for kind: StitchKind) -> String {
-        switch kind {
-        case .chain: "○"
-        case .slipStitch: "●"
-        case .singleCrochet: "×"
-        case .halfDoubleCrochet: "T"
-        case .doubleCrochet: "T/"
-        case .trebleCrochet: "T//"
-        }
     }
 }
 
