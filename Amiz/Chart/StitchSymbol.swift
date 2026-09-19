@@ -16,9 +16,9 @@ enum StitchSymbol {
         /// 記号の横幅（×の腕の長さや T の横棒）
         var armLength: CGFloat { unit * 0.27 }
         /// 鎖の楕円の大きさ
-        var chainSize: CGSize { CGSize(width: unit * 0.8, height: unit * 0.45) }
+        var chainSize: CGSize { CGSize(width: unit * 0.7, height: unit * 0.42) }
         /// 引き抜きの楕円の大きさ
-        var slipSize: CGSize { CGSize(width: unit * 0.5, height: unit * 0.3) }
+        var slipSize: CGSize { CGSize(width: unit * 0.45, height: unit * 0.26) }
     }
 
     /// 細編みの×をどこに置くか（domain-spec 11 の描き分け）

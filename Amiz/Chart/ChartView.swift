@@ -66,17 +66,17 @@ struct ChartView: View {
             }
         }
 
-        // 段番号（段の始まりの少し手前に置く）
+        // 段番号：段の始まりの空き（立ち上がりの楕円と引き抜きの点の間の高さ）に置く
         if showsRowNumbers {
             for ring in layout.rings {
-                let angle = ring.startAngle + Double.pi / 12
-                let radius = (ring.innerRadius + ring.outerRadius) / 2
+                let angle = ring.seamAngle
+                let radius = ring.innerRadius + 0.62 + max(0, (ring.outerRadius - ring.innerRadius - 1)) / 2
                 let point = transform.toScreen(CGPoint(x: radius * cos(angle), y: -radius * sin(angle)))
-                let text = Text("\(ring.rowIndex + 1)").font(.system(size: max(8, transform.unit * 0.55), weight: .semibold)).foregroundStyle(.secondary)
+                let text = Text("\(ring.rowIndex + 1)").font(.system(size: max(7, transform.unit * 0.36), weight: .semibold)).foregroundStyle(.secondary)
                 let resolved = context.resolve(text)
                 let size = resolved.measure(in: CGSize(width: 100, height: 100))
-                let background = CGRect(x: point.x - size.width / 2 - 2, y: point.y - size.height / 2 - 1, width: size.width + 4, height: size.height + 2)
-                context.fill(Path(roundedRect: background, cornerRadius: 3), with: .color(Color(.systemBackground).opacity(0.85)))
+                let background = CGRect(x: point.x - size.width / 2 - 1, y: point.y - size.height / 2, width: size.width + 2, height: size.height)
+                context.fill(Path(roundedRect: background, cornerRadius: 2), with: .color(Color(.systemBackground).opacity(0.8)))
                 context.draw(resolved, at: point)
             }
         }

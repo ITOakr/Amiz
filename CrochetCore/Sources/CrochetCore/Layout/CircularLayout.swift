@@ -20,6 +20,10 @@ public enum CircularLayout {
         public var minRowHeight = 1.0
         /// 高さのない目（鎖・引き抜き）を描くときの長さ
         public var lowStitchHeight = 0.5
+        /// 数えない立ち上がり（鎖1目）を描く長さ（根元から。段の高さより短くして隣の目と触れないようにする）
+        public var uncountedTurningChainHeight = 0.5
+        /// 段を閉じる引き抜きを頭からどれだけ内側に置くか（次の段の立ち上がりと離すため）
+        public var closingSlipInset = 0.12
         /// 外接矩形の余白
         public var margin = 1.5
 
@@ -64,6 +68,10 @@ public enum CircularLayout {
                 countedIndexByStitchIndex[item.offset] = countedIndex
             }
 
+            // 段の始まりの空き：最初の目の半歩手前（等間隔ならこの段の1目分、入力中なら前段の1目分の半分）
+            let ownStep = headAngles.count > 1 ? headAngles[1] - headAngles[0] : previousStep
+            let seamAngle = (headAngles.first ?? previousHeadAngles.first ?? 0) - ownStep / 2
+
             for (stitchIndex, stitch) in row.stitches.enumerated() {
                 let laidOut: LaidOutStitch
                 if let countedIndex = countedIndexByStitchIndex[stitchIndex] {
@@ -82,19 +90,25 @@ public enum CircularLayout {
                         center: center, options: options
                     )
                 } else {
-                    // 数えない目：立ち上がり（鎖1目）は段の始めの半歩手前、段を閉じる引き抜きは終わりの半歩後ろ
+                    // 数えない目は段の始まりの空き（seam）に置く。同じ角度でも高さで分ける：
+                    // 立ち上がり（鎖1目）は根元寄りの小さな楕円、段を閉じる引き抜きは頭の近くの点
+                    // （×は中ほどが幅広く根元と頭の近くは細いので、隣の目と触れない）
                     let angle: Double
+                    let radius: Double
                     switch stitch.role {
                     case .turningChain:
-                        angle = (headAngles.first ?? previousHeadAngles.first ?? 0) - previousStep / 2
+                        angle = seamAngle
+                        radius = innerRadius + options.uncountedTurningChainHeight
                     case .closingSlipStitch:
-                        angle = (headAngles.last ?? previousHeadAngles.first ?? 0) + previousStep / 2
+                        angle = seamAngle
+                        radius = outerRadius - options.closingSlipInset
                     case .regular:
                         angle = headAngles.last ?? previousHeadAngles.first ?? 0
+                        radius = outerRadius
                     }
                     laidOut = make(
                         stitch, rowIndex: rowIndex, countedIndex: nil,
-                        headAngle: angle, outerRadius: outerRadius,
+                        headAngle: angle, outerRadius: radius,
                         bases: stitch.role == .closingSlipStitch ? [] : [point(center: center, radius: innerRadius, angle: angle)],
                         center: center, options: options
                     )
@@ -104,7 +118,7 @@ public enum CircularLayout {
 
             rings.append(RowRing(
                 rowIndex: rowIndex, innerRadius: innerRadius, outerRadius: outerRadius,
-                startAngle: headAngles.first ?? previousHeadAngles.first ?? 0
+                startAngle: headAngles.first ?? previousHeadAngles.first ?? 0, seamAngle: seamAngle
             ))
             previousHeadAngles = headAngles
             innerRadius = outerRadius

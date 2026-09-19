@@ -59,14 +59,17 @@ public struct RowRing: Hashable, Sendable {
     public var innerRadius: Double
     /// 頭側の半径
     public var outerRadius: Double
-    /// 段の始まりの角度（段番号を置く位置の目安）
+    /// 段の最初の目の頭の角度
     public var startAngle: Double
+    /// 段の始まりの空き（最初の目の半歩手前）の角度。立ち上がり・段を閉じる引き抜き・段番号を置く
+    public var seamAngle: Double
 
-    public init(rowIndex: Int, innerRadius: Double, outerRadius: Double, startAngle: Double) {
+    public init(rowIndex: Int, innerRadius: Double, outerRadius: Double, startAngle: Double, seamAngle: Double) {
         self.rowIndex = rowIndex
         self.innerRadius = innerRadius
         self.outerRadius = outerRadius
         self.startAngle = startAngle
+        self.seamAngle = seamAngle
     }
 }
 

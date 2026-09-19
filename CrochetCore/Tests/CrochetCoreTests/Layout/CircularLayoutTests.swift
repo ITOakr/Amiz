@@ -149,11 +149,16 @@ struct CircularLayoutTests {
         let turningChain = row1.first!
         #expect(turningChain.countedIndex == nil)
         #expect(sameAngle(turningChain.polarAngle, row1[1].polarAngle - step / 2))
+        // 鎖1目の立ち上がりは根元寄りに短く（段の高さ 1 より低い）
+        #expect(abs(turningChain.polarRadius - (layout.rings[0].innerRadius + 0.5)) < 1e-9)
 
         let closing = row1.last!
         #expect(closing.role == .closingSlipStitch)
         #expect(closing.bases.isEmpty)
         #expect(sameAngle(closing.polarAngle, row1[6].polarAngle + step / 2))
+        // 段を閉じる引き抜きは頭の近く（立ち上がりと同じ角度でも高さで分かれる）
+        #expect(abs(closing.polarRadius - (layout.rings[0].outerRadius - 0.12)) < 1e-9)
+        #expect(sameAngle(layout.rings[0].seamAngle, turningChain.polarAngle))
     }
 
     @Test("検索：StitchRef から、（段, 数える目の位置）から、一番近い位置から")
