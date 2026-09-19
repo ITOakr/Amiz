@@ -11,6 +11,8 @@ final class EditorModel {
     private(set) var pattern: Pattern
     /// 展開結果。`pattern` が変わるたびに計算し直す（保存はしない。tech-spec 5-1）
     private(set) var expansion: PatternExpansion
+    /// 図のレイアウト。`pattern` が変わるたびに計算し直す
+    private(set) var layout: ChartLayout
     /// 先に選ぶボタンの状態（状態 S2）
     private(set) var modifier = StitchModifier.none
     /// 「繰り返し開始」を押した位置（入力中の段の操作数）。押していなければ nil
@@ -23,7 +25,9 @@ final class EditorModel {
 
     init(pattern: Pattern) {
         self.pattern = pattern
-        self.expansion = pattern.expanded()
+        let expansion = pattern.expanded()
+        self.expansion = expansion
+        self.layout = pattern.circularLayout(expansion: expansion)
     }
 
     /// 新しい作品（わの作り目・輪編み）で始める
@@ -79,6 +83,13 @@ final class EditorModel {
     /// 作り目の行の文章（「わの作り目」「作り目：鎖21目」）
     var foundationText: String {
         StitchTableFormatter.foundationText(for: pattern)
+    }
+
+    /// 次に拾う前段の目（図のハイライト。ui-spec 5-3）。前段がない・使い切った・段がないときは nil
+    var nextStitchToPick: LaidOutStitch? {
+        guard let index = currentRowIndex, index > 0, let row = currentRow,
+              let unpicked = row.unpickedCount, unpicked > 0 else { return nil }
+        return layout.countedStitch(rowIndex: index - 1, countedIndex: row.pickedCount)
     }
 
     /// 「繰り返し終了」で「段の終わりまで」を選べるか
@@ -226,14 +237,20 @@ final class EditorModel {
         undoStack.append(before)
         redoStack.removeAll()
         pattern = after
-        expansion = after.expanded()
+        recompute()
     }
 
     /// 元に戻す／やり直しで編み図を差し替える。先に選ぶ状態と繰り返し開始の位置はずれるので解除する
     private func replacePattern(with newPattern: Pattern) {
         pattern = newPattern
-        expansion = newPattern.expanded()
+        recompute()
         modifier = .none
         repeatStartIndex = nil
+    }
+
+    /// 展開結果とレイアウトを計算し直す
+    private func recompute() {
+        expansion = pattern.expanded()
+        layout = pattern.circularLayout(expansion: expansion)
     }
 }

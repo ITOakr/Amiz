@@ -83,7 +83,7 @@ enum StitchSymbol {
         for index in 0..<max(chains, 1) {
             let center = root + d * (each * (CGFloat(index) + 0.5))
             var oval = Path()
-            oval.addEllipse(in: ellipseRect(center: center, size: CGSize(width: each * 0.85, height: style.chainSize.height)))
+            oval.addEllipse(in: ellipseRect(center: center, size: CGSize(width: min(each * 0.85, style.chainSize.width), height: style.chainSize.height * 0.8)))
             path.addPath(rotated(oval, around: center, direction: d))
         }
         return path
