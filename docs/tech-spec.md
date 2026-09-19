@@ -108,6 +108,10 @@
 | `PatternExpansion` | 編み図全体の展開結果（段ごとの `RowExpansion`） | |
 | `ConsistencyChecker` | 段ごとの目数の警告を出す。`PatternExpansion.warnings(excludingRowAt:)` が省略形。入力中の段は呼び出し側が除外する | domain 23 |
 | `RowWarning` | 警告。段の位置、種類（不足／過多）、警告文 | domain 23、ui 5-4 |
+| `PatternEditor` | 段の編集（`RowEdit`：置き換え／削除／複製）の影響範囲を調べ（`EditImpact`）、「上の段を残す」「上の段をほどく」を適用する | domain 24、25、ui 7-1 |
+
+- 影響範囲の判定：置き換えは目数が変わったときだけ、削除・複製は上に段があれば必ず確認する。影響を受けるのは編集した段より上のすべての段
+- 段の複製は `Row.duplicated()` で段と操作の ID をすべて新しくする。手順の比較は ID を無視する `Row.hasSameSteps(as:)` で行う
 
 - 立ち上がりは鎖の目数に関わらず展開後は1要素（数えるときは1目）。図では鎖の数だけ描く
 - 「前段の目数」は前段の合計目数（鎖を含む）。段の展開結果から次の段へ渡す
