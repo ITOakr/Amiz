@@ -42,6 +42,16 @@ enum TestPatterns {
         ])
     }
 
+    /// TC-2 TC-1 の1段目を「わの作り目に細編み7目」に修正し、「上の段を残す」を選んだ状態
+    static func tc2AfterKeepingRowsAbove() -> Pattern {
+        var pattern = tc1()
+        pattern.rows[0] = Row(
+            id: pattern.rows[0].id,
+            steps: [.turningChain(1)] + stitches(.singleCrochet, 7) + [.closeRound()]
+        )
+        return pattern
+    }
+
     /// 「前段 n 目」を用意するための1段目（わの作り目に細編み n 目）と、その上に test 用の段を1つ載せた編み図
     static func afterRound(of previousCount: Int, row: Row) -> Pattern {
         Pattern(method: .joinedRounds, foundation: .magicRing, rows: [
