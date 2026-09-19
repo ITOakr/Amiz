@@ -260,4 +260,58 @@ final class EditorSmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["2段目・この段 0目"].waitForExistence(timeout: 2))
         XCTAssertFalse(app.staticTexts["14目"].exists)
     }
+
+    /// 段の長押しメニュー（U22）：複製で「2〜6段目（増減なし）」にまとまり、途中の段の削除は確認が出る
+    @MainActor
+    func testRowContextMenu() {
+        let app = launchFresh()
+        createWork(in: app)
+        let singleCrochet = app.buttons["stitch.singleCrochet"]
+        XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
+
+        // 1段目：細編み6目、2段目：残りすべてに細編み
+        for _ in 0..<6 { singleCrochet.tap() }
+        app.buttons["op.finishRow"].tap()
+        app.buttons["modifier.untilEnd"].tap()
+        singleCrochet.tap()
+        app.buttons["op.finishRow"].tap()
+
+        app.buttons["目数表"].tap()
+        let table = app.collectionViews.firstMatch
+        XCTAssertTrue(table.waitForExistence(timeout: 2))
+        table.swipeDown()
+
+        // 2段目を長押し → 複製 ×4
+        let row2 = app.buttons["table.row.2"]
+        XCTAssertTrue(row2.waitForExistence(timeout: 2))
+        row2.press(forDuration: 1.0)
+        let duplicate = app.buttons["この段を複製"]
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 2))
+        duplicate.tap()
+        let alert = app.alerts["この段を複製"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        let field = alert.textFields.firstMatch
+        field.tap()
+        field.typeText(XCUIKeyboardKey.delete.rawValue)
+        field.typeText("4")
+        alert.buttons["複製する"].tap()
+
+        XCTAssertTrue(app.staticTexts["2〜6段目"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["6目（増減なし）"].exists)
+        XCTAssertTrue(app.staticTexts["7段目・この段 0目"].exists)
+
+        // 1段目を長押し → 削除 → 確認が出る → キャンセル
+        table.swipeDown()
+        let row1 = app.buttons["table.row.1"]
+        XCTAssertTrue(row1.waitForExistence(timeout: 2))
+        row1.press(forDuration: 1.0)
+        let delete = app.buttons["この段を削除"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 2))
+        delete.tap()
+        let confirm = app.alerts["修正の確認"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 2))
+        XCTAssertTrue(confirm.staticTexts["1段目を削除します。2〜6段目に影響があります。"].exists)
+        confirm.buttons["キャンセル"].tap()
+        XCTAssertTrue(app.staticTexts["わの作り目に細編み6目"].waitForExistence(timeout: 2))
+    }
 }

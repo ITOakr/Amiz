@@ -8,6 +8,9 @@ struct StitchTableView: View {
 
     /// 展開して1段ずつ表示しているまとめ行（先頭の段番号で覚える）
     @State private var expandedRuns: Set<Int> = []
+    /// 複製の回数を聞いている段（0始まり）
+    @State private var duplicateTarget: Int?
+    @State private var duplicateCountText = "1"
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -29,6 +32,20 @@ struct StitchTableView: View {
             }
             .listStyle(.plain)
             .accessibilityIdentifier("stitchTable")
+            .alert("この段を複製", isPresented: isDuplicatePresented) {
+                TextField("回数", text: $duplicateCountText)
+                    .keyboardType(.numberPad)
+                Button("複製する") {
+                    if let target = duplicateTarget {
+                        model.requestDuplicateRow(at: target, times: max(1, Int(duplicateCountText) ?? 1))
+                    }
+                }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                if let target = duplicateTarget {
+                    Text("\(target + 1)段目と同じ手順の段を、その直後に指定した回数ぶん挿入します。")
+                }
+            }
             // 段が増えたら入力中の段が見えるように末尾へスクロールする
             .onChange(of: model.pattern.rows.count, initial: true) { _, _ in
                 withAnimation {
@@ -39,6 +56,10 @@ struct StitchTableView: View {
     }
 
     private static let currentRowID = "currentRow"
+
+    private var isDuplicatePresented: Binding<Bool> {
+        Binding(get: { duplicateTarget != nil }, set: { if !$0 { duplicateTarget = nil } })
+    }
 
     /// 作り目の行（domain-spec 33）
     private var foundationRow: some View {
@@ -92,6 +113,17 @@ struct StitchTableView: View {
         .buttonStyle(.plain)
         .listRowBackground(rowBackground(hasWarning: warning != nil, isEditing: isEditing))
         .accessibilityIdentifier("table.row.\(row.rowNumbers.lowerBound)")
+        // 段の長押しメニュー（U22）。まとめた行は展開してから
+        .contextMenu {
+            if !row.isMerged {
+                Button("この段を複製", systemImage: "plus.square.on.square") {
+                    duplicateTarget = row.rowNumbers.lowerBound - 1
+                }
+                Button("この段を削除", systemImage: "trash", role: .destructive) {
+                    model.requestDeleteRow(at: row.rowNumbers.lowerBound - 1)
+                }
+            }
+        }
     }
 
     private func rowBackground(hasWarning: Bool, isEditing: Bool) -> Color {

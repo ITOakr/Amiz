@@ -37,19 +37,25 @@ final class EditorModel {
         var repeatStartIndex: Int?
     }
 
-    /// 目数が変わる修正の確認待ち。「上の段を残す」なら `edited` をそのまま使い、「ほどく」なら上の段を消す
+    /// 上の段に影響する修正の確認待ち（ui-spec 7-1）。「上の段を残す」か「ほどく」かで適用の仕方が変わる
     struct PendingConfirmation {
         let impact: EditImpact
-        let rowIndex: Int
-        let editedRow: Row
+        let edit: RowEdit
 
         /// 7-1 のメッセージ（「2段目の目数が12目から14目に変わりました。3〜5段目に影響があります。」）
         var message: String {
             var text = "\(impact.editedRowNumber)段目"
-            if let before = impact.countBefore, let after = impact.countAfter {
-                text += "の目数が\(before)目から\(after)目に変わりました。"
-            } else {
-                text += "を変更します。"
+            switch edit {
+            case .replace:
+                if let before = impact.countBefore, let after = impact.countAfter {
+                    text += "の目数が\(before)目から\(after)目に変わりました。"
+                } else {
+                    text += "を変更します。"
+                }
+            case .delete:
+                text += "を削除します。"
+            case .duplicate(_, let times):
+                text += "を\(times)回複製します。"
             }
             if let affected = impact.affectedRowsDescription {
                 text += "\(affected)に影響があります。"
@@ -379,7 +385,7 @@ final class EditorModel {
         let edit = RowEdit.replace(rowIndex: session.rowIndex, with: session.row)
         let impact = PatternEditor.impact(of: edit, on: pattern)
         if impact.needsConfirmation {
-            pendingConfirmation = PendingConfirmation(impact: impact, rowIndex: session.rowIndex, editedRow: session.row)
+            pendingConfirmation = PendingConfirmation(impact: impact, edit: edit)
         } else {
             editingSession = nil
             mutate { $0 = PatternEditor.applyKeepingRowsAbove(edit, to: $0) }
@@ -400,6 +406,35 @@ final class EditorModel {
         change(&session, pattern.method)
         editingSession = session
         recompute()
+    }
+
+    // MARK: - 段の削除・複製（ui-spec U22、domain-spec 18・25）
+
+    /// 段を削除する。上に段があれば確認（7-1）
+    func requestDeleteRow(at index: Int) {
+        requestRowEdit(.delete(rowIndex: index))
+    }
+
+    /// 段を複製し、その段の直後に times 段挿入する。上に段があれば確認（7-1）
+    func requestDuplicateRow(at index: Int, times: Int) {
+        guard times > 0 else { return }
+        requestRowEdit(.duplicate(rowIndex: index, times: times))
+    }
+
+    private func requestRowEdit(_ edit: RowEdit) {
+        guard pattern.rows.indices.contains(edit.rowIndex) else { return }
+        selection = nil
+        editingSession = nil
+        let impact = PatternEditor.impact(of: edit, on: pattern)
+        if impact.needsConfirmation {
+            pendingConfirmation = PendingConfirmation(impact: impact, edit: edit)
+        } else {
+            mutate { pattern in
+                pattern = PatternEditor.applyKeepingRowsAbove(edit, to: pattern)
+                PatternInput.ensureOpenRow(in: &pattern)
+            }
+            recompute()
+        }
     }
 
     // MARK: - 目の選択（ui-spec U15）
@@ -472,7 +507,7 @@ final class EditorModel {
         let keepsSelection: Bool = if case .changeKind = edit { true } else if case .setTurningChain = edit { true } else { false }
 
         if impact.needsConfirmation {
-            pendingConfirmation = PendingConfirmation(impact: impact, rowIndex: location.rowIndex, editedRow: editedRow)
+            pendingConfirmation = PendingConfirmation(impact: impact, edit: .replace(rowIndex: location.rowIndex, with: editedRow))
         } else {
             mutate { $0 = edited }
             if !keepsSelection { selection = nil }
@@ -483,7 +518,7 @@ final class EditorModel {
     func resolveConfirmation(keepingRowsAbove: Bool) {
         guard let pending = pendingConfirmation else { return }
         pendingConfirmation = nil
-        let edit = RowEdit.replace(rowIndex: pending.rowIndex, with: pending.editedRow)
+        let edit = pending.edit
         editingSession = nil
         mutate { pattern in
             pattern = keepingRowsAbove
