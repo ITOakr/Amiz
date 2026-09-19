@@ -19,6 +19,8 @@ public struct LaidOutStitch: Hashable, Sendable {
     public var head: CGPoint
     /// 記号の根元の位置。鎖編みなど前段を拾わない目は空、普通の目は1つ、n目一度は n 個
     public var bases: [CGPoint]
+    /// 同じ根元を共有する目の数（n目編み入れるなら n。普通の目は 1）。記号の描き分けに使う（domain-spec 11）
+    public var sharedBaseCount: Int
     /// 記号の向き（画面座標のラジアン。根元から頭へ向かう方向。根元がなければ放射方向）
     public var angle: Double
     /// 記号の長さ（鎖何目分か）
@@ -30,8 +32,8 @@ public struct LaidOutStitch: Hashable, Sendable {
 
     public init(
         ref: StitchRef, kind: StitchKind, role: ExpandedStitch.Role, into: Placement, isCounted: Bool,
-        rowIndex: Int, countedIndex: Int?, head: CGPoint, bases: [CGPoint], angle: Double, height: Double,
-        polarAngle: Double, polarRadius: Double
+        rowIndex: Int, countedIndex: Int?, head: CGPoint, bases: [CGPoint], sharedBaseCount: Int = 1,
+        angle: Double, height: Double, polarAngle: Double, polarRadius: Double
     ) {
         self.ref = ref
         self.kind = kind
@@ -42,6 +44,7 @@ public struct LaidOutStitch: Hashable, Sendable {
         self.countedIndex = countedIndex
         self.head = head
         self.bases = bases
+        self.sharedBaseCount = sharedBaseCount
         self.angle = angle
         self.height = height
         self.polarAngle = polarAngle
@@ -56,14 +59,17 @@ public struct RowRing: Hashable, Sendable {
     public var innerRadius: Double
     /// 頭側の半径
     public var outerRadius: Double
-    /// 段の始まりの角度（段番号を置く位置の目安）
+    /// 段の最初の目の頭の角度
     public var startAngle: Double
+    /// 段の始まりの空き（最初の目の半歩手前）の角度。立ち上がり・段を閉じる引き抜き・段番号を置く
+    public var seamAngle: Double
 
-    public init(rowIndex: Int, innerRadius: Double, outerRadius: Double, startAngle: Double) {
+    public init(rowIndex: Int, innerRadius: Double, outerRadius: Double, startAngle: Double, seamAngle: Double) {
         self.rowIndex = rowIndex
         self.innerRadius = innerRadius
         self.outerRadius = outerRadius
         self.startAngle = startAngle
+        self.seamAngle = seamAngle
     }
 }
 

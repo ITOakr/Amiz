@@ -53,12 +53,12 @@ struct CircularLayoutTests {
             #expect(stitches.allSatisfy { abs($0.polarRadius - layout.rings[row].outerRadius) < 1e-9 })
         }
 
-        // 1段目と2段目（全目に増し目）は等間隔
-        for (row, count) in [(0, 6), (1, 12)] {
+        // 終わった段はすべて等間隔（実物の編み図と同じ）
+        for (row, count) in expectedCounts.enumerated() {
             let stitches = countedStitches(of: layout, row: row)
             let step = twoPi / Double(count)
             for pair in zip(stitches, stitches.dropFirst()) {
-                #expect(abs(normalized(pair.1.polarAngle - pair.0.polarAngle) - step) < 1e-9)
+                #expect(abs(normalized(pair.1.polarAngle - pair.0.polarAngle) - step) < 1e-9, "\(row + 1)段目は等間隔")
             }
         }
 
@@ -87,8 +87,8 @@ struct CircularLayoutTests {
             let baseAngle = atan2(-Double(base.y), Double(base.x))
             #expect(sameAngle(baseAngle, previous.polarAngle))
 
-            // 頭は前段の1目分の幅（2π/6）の中で均等に：根元の角度の前後に 1/4 ずつ（V字が左右対称）
-            let quarter = twoPi / 6 / 4
+            // 頭は根元の角度の前後に半歩ずつ（V字が左右対称）
+            let quarter = twoPi / 12 / 2
             #expect(sameAngle(first.polarAngle, previous.polarAngle - quarter))
             #expect(sameAngle(second.polarAngle, previous.polarAngle + quarter))
         }
@@ -149,11 +149,16 @@ struct CircularLayoutTests {
         let turningChain = row1.first!
         #expect(turningChain.countedIndex == nil)
         #expect(sameAngle(turningChain.polarAngle, row1[1].polarAngle - step / 2))
+        // 鎖1目の立ち上がりは根元寄りに短く（段の高さ 1 より低い）
+        #expect(abs(turningChain.polarRadius - (layout.rings[0].innerRadius + 0.5)) < 1e-9)
 
         let closing = row1.last!
         #expect(closing.role == .closingSlipStitch)
         #expect(closing.bases.isEmpty)
         #expect(sameAngle(closing.polarAngle, row1[6].polarAngle + step / 2))
+        // 段を閉じる引き抜きは頭の近く（立ち上がりと同じ角度でも高さで分かれる）
+        #expect(abs(closing.polarRadius - (layout.rings[0].outerRadius - 0.12)) < 1e-9)
+        #expect(sameAngle(layout.rings[0].seamAngle, turningChain.polarAngle))
     }
 
     @Test("検索：StitchRef から、（段, 数える目の位置）から、一番近い位置から")
@@ -182,18 +187,32 @@ struct CircularLayoutTests {
         #expect(layout.nearestStitch(to: CGPoint(x: 100, y: 100), maxDistance: 1) == nil)
     }
 
-    @Test("入力中の段：編んだ目は拾った前段の目の真上に置かれ、円周に散らばらない")
+    @Test("入力中の段：編んだ目は拾った前段の目の真上に置かれ、円周に散らばらない。増し目は前段1目分の幅の中で広がる")
     func rowInProgressFollowsBases() {
-        // 5段目（前段24目）を4目だけ入力した状態
+        // 5段目（前段24目）を「細編み4目、増し目」だけ入力した状態
         var pattern = TestPatterns.tc1()
-        pattern.rows[4] = Row(steps: [.turningChain(1)] + TestPatterns.stitches(.singleCrochet, 4))
+        pattern.rows[4] = Row(steps: [.turningChain(1)] + TestPatterns.stitches(.singleCrochet, 4) + [.increase(.singleCrochet)])
         let layout = pattern.circularLayout()
         let row5 = countedStitches(of: layout, row: 4)
-        #expect(row5.count == 4)
+        #expect(row5.count == 6)
 
-        for (index, stitch) in row5.enumerated() {
+        for index in 0..<4 {
             let previous = layout.countedStitch(rowIndex: 3, countedIndex: index)!
-            #expect(sameAngle(stitch.polarAngle, previous.polarAngle))
+            #expect(sameAngle(row5[index].polarAngle, previous.polarAngle))
+        }
+        let base = layout.countedStitch(rowIndex: 3, countedIndex: 4)!.polarAngle
+        let quarter = twoPi / 24 / 4
+        #expect(sameAngle(row5[4].polarAngle, base - quarter))
+        #expect(sameAngle(row5[5].polarAngle, base + quarter))
+        #expect(row5[4].sharedBaseCount == 2)
+        #expect(row5[3].sharedBaseCount == 1)
+
+        // 段を終える（閉じる）と等間隔になる
+        pattern.rows[4].steps.append(.closeRound())
+        let closed = countedStitches(of: pattern.circularLayout(), row: 4)
+        let step = twoPi / 6
+        for pair in zip(closed, closed.dropFirst()) {
+            #expect(abs(normalized(pair.1.polarAngle - pair.0.polarAngle) - step) < 1e-9)
         }
     }
 
