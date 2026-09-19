@@ -41,6 +41,7 @@
 - アプリのビルド：`xcodebuild build -project Amiz.xcodeproj -scheme Amiz -destination 'platform=iOS Simulator,name=iPhone 17'`
 - アプリのテスト：`xcodebuild test -project Amiz.xcodeproj -scheme Amiz -destination 'platform=iOS Simulator,name=iPhone 17'`
 - CrochetCore のテスト：`swift test --package-path CrochetCore`
+- UI テスト（通常は走らせない。画面の操作を通しで確認したいときだけ）：`xcodebuild test -project Amiz.xcodeproj -scheme AmizUITests -destination 'platform=iOS Simulator,name=iPhone 17'`
 
 `xcodebuild` の出力は長いので、結果だけ見るときは `| grep -E "SUCCEEDED|FAILED|error:"` を付ける。iPad で確認するときは `name=iPad Pro 11-inch (M5)` にする。
 
