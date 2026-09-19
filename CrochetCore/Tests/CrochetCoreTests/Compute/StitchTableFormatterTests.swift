@@ -123,6 +123,39 @@ struct StitchTableFormatterTests {
         #expect(rows.map(\.rowNumberText) == ["1段目", "2段目", "3段目"])
     }
 
+    @Test("操作1つの表記（現在の段の項目）")
+    func stepLabels() {
+        let labels = [
+            Step.turningChain(1), .stitch(.singleCrochet), .increase(.singleCrochet), .decrease(.doubleCrochet, count: 3),
+            .skip(), .leaveRemaining(), .closeRound(), .stitch(.chain),
+            .repeating([.stitch(.singleCrochet), .increase(.singleCrochet)], times: 6),
+            .untilEnd([.stitch(.singleCrochet)]),
+        ].map(StitchTableFormatter.label)
+
+        #expect(labels == [
+            "立ち上がり鎖1", "細編み", "細編み2目編み入れる", "長編み3目一度",
+            "1目飛ばす", "残りは編まない", "引き抜き", "鎖編み",
+            "（細編み1目、細編み2目編み入れる）×6",
+            "残りの目すべてに細編み",
+        ])
+    }
+
+    @Test("作り目の行：わの作り目、鎖の作り目は鎖の目数を計算する（TC-7）")
+    func foundationText() {
+        #expect(StitchTableFormatter.foundationText(for: TestPatterns.tc1()) == "わの作り目")
+        #expect(StitchTableFormatter.foundationChainCount(for: TestPatterns.tc1()) == nil)
+
+        // 1段目を編み始める前 → 仮表示 21
+        var pattern = Pattern(method: .flat, foundation: .chain(stitchCount: 20))
+        #expect(StitchTableFormatter.foundationText(for: pattern) == "作り目：鎖21目")
+
+        // 細編み（鎖1目）→ 21、長編み（鎖3目）→ 22
+        pattern.rows = [Row(steps: [.turningChain(1), .stitch(.singleCrochet)])]
+        #expect(StitchTableFormatter.foundationChainCount(for: pattern) == 21)
+        pattern.rows = [Row(steps: [.turningChain(3), .stitch(.doubleCrochet)])]
+        #expect(StitchTableFormatter.foundationChainCount(for: pattern) == 22)
+    }
+
     @Test("目の種類の日本語名")
     func japaneseNames() {
         #expect(StitchKind.allCases.map(\.japaneseName) == ["鎖編み", "引き抜き編み", "細編み", "中長編み", "長編み", "長々編み"])

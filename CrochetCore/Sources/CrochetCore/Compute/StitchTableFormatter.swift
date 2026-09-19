@@ -53,6 +53,50 @@ public enum StitchTableFormatter {
         return prefix + body
     }
 
+    /// 操作1つの表記。「現在の段」の項目や繰り返し終了の確認に使う（ui-spec 5-5・5-6）。
+    /// 目数表の文章と違い、数えない立ち上がりや段を閉じる引き抜きも書く
+    public static func label(for step: Step) -> String {
+        switch step.kind {
+        case .turningChain(let chains):
+            "立ち上がり鎖\(chains)"
+        case .stitch(let kind, let into):
+            placementPrefix(into) + kind.japaneseName
+        case .increase(let kind, let count, let into):
+            placementPrefix(into) + "\(kind.instructionName)\(count)目編み入れる"
+        case .decrease(let kind, let count):
+            "\(kind.instructionName)\(count)目一度"
+        case .skip:
+            "1目飛ばす"
+        case .leaveRemaining:
+            "残りは編まない"
+        case .closeRound:
+            "引き抜き"
+        case .repeatGroup(let unit, let count):
+            repeatText(unit: unit, count: count)
+        }
+    }
+
+    /// 作り目の行の文章（「わの作り目」「作り目：鎖21目」。domain-spec 33）
+    public static func foundationText(for pattern: Pattern) -> String {
+        switch pattern.foundation {
+        case .magicRing:
+            "わの作り目"
+        case .chain:
+            "作り目：鎖\(foundationChainCount(for: pattern) ?? 0)目"
+        }
+    }
+
+    /// 鎖の作り目で実際に編む鎖の目数：n ＋ 1段目の立ち上がりの鎖の目数 −（1目と数えるなら 1）。
+    /// 立ち上がりが決まる前は細編みの段（鎖1目）として仮に計算する。わの作り目では nil
+    public static func foundationChainCount(for pattern: Pattern) -> Int? {
+        guard case .chain(let stitchCount) = pattern.foundation else { return nil }
+        var chains = 1
+        if case .turningChain(let firstRowChains) = pattern.rows.first?.steps.first?.kind {
+            chains = firstRowChains
+        }
+        return stitchCount + chains - (chains >= 2 ? 1 : 0)
+    }
+
     /// 目数の表記（domain-spec 8）
     public static func countText(for expansion: RowExpansion) -> String {
         if expansion.containsChains {
