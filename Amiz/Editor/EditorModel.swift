@@ -143,11 +143,27 @@ final class EditorModel {
         }
     }
 
-    /// 「段を終える」。残っている前段の目の確認（7-2）は画面側が先に行う
-    func pressFinishRow() {
+    /// 「段を終える」を押したときに、前段に拾っていない目が残っていれば その数（確認 7-2 を出す）。なければ nil
+    var remainingBeforeFinish: Int? {
+        guard let unpicked = currentRow?.unpickedCount, unpicked > 0 else { return nil }
+        return unpicked
+    }
+
+    /// 前段の目を使い切ったか（ui-spec 5-5「前段を使い切りました」）
+    var hasUsedUpPreviousRow: Bool {
+        guard let row = currentRow, row.previousCount != nil else { return false }
+        return row.unpickedCount == 0
+    }
+
+    /// 「段を終える」。残っている前段の目の確認（7-2）は画面側が先に行う。
+    /// - Parameter leavingRemaining: 確認で「残りは編まない」を選んだとき true（1回の操作として元に戻せる）
+    func pressFinishRow(leavingRemaining: Bool = false) {
         modifier = .none
         repeatStartIndex = nil
         mutate { pattern in
+            if leavingRemaining {
+                PatternInput.addLeaveRemaining(to: &pattern)
+            }
             PatternInput.finishRow(of: &pattern)
         }
     }

@@ -13,6 +13,13 @@ struct CurrentRowView: View {
                 Text(rowSummary)
                     .font(.subheadline.weight(.semibold))
                     .accessibilityIdentifier("status.row")
+                if model.hasUsedUpPreviousRow {
+                    // 前段を拾い切った。さらに編める（拾いすぎ）が、警告は段を終えたときに出す（domain-spec 23）
+                    Text("前段を使い切りました")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("status.usedUp")
+                }
                 recentSteps
             }
             .frame(maxWidth: .infinity, alignment: .leading)
