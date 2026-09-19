@@ -14,15 +14,27 @@ enum StitchSymbol {
         var lineWidth: CGFloat = 1.6
 
         /// 記号の横幅（×の腕の長さや T の横棒）
-        var armLength: CGFloat { unit * 0.32 }
+        var armLength: CGFloat { unit * 0.27 }
         /// 鎖の楕円の大きさ
         var chainSize: CGSize { CGSize(width: unit * 0.8, height: unit * 0.45) }
         /// 引き抜きの楕円の大きさ
         var slipSize: CGSize { CGSize(width: unit * 0.5, height: unit * 0.3) }
     }
 
+    /// 細編みの×をどこに置くか（domain-spec 11 の描き分け）
+    enum CrossPlacement {
+        /// 普通の目：根元と頭の中間に×だけ
+        case middle
+        /// n目編み入れる：×を頭側に置き、共有する根元から脚を伸ばす（V字）
+        case nearHead
+        /// n目一度：×を根元側に置き、共有する頭へ脚を集める（逆V字）
+        case nearRoot
+    }
+
     /// 線で描く部分の Path
-    static func strokePath(kind: StitchKind, from root: CGPoint, to head: CGPoint, style: Style) -> Path {
+    static func strokePath(
+        kind: StitchKind, from root: CGPoint, to head: CGPoint, style: Style, cross: CrossPlacement = .middle
+    ) -> Path {
         var path = Path()
         let (d, n) = axes(from: root, to: head)
         let a = style.armLength
@@ -36,8 +48,22 @@ enum StitchSymbol {
             return Path()  // 塗りだけ
 
         case .singleCrochet:
-            // ×：根元と頭の中間に、線分に対して45度の腕
-            let c = midpoint(root, head)
+            // ×：線分に対して45度の腕。置き場所は増し目・減らし目で変える
+            let c: CGPoint
+            switch cross {
+            case .middle:
+                c = midpoint(root, head)
+            case .nearHead:
+                c = head - d * a
+                // 根元から×の下端まで脚
+                path.move(to: root)
+                path.addLine(to: c - d * a)
+            case .nearRoot:
+                c = root + d * a
+                // ×の上端から頭まで脚
+                path.move(to: c + d * a)
+                path.addLine(to: head)
+            }
             path.move(to: c + (d + n) * -a)
             path.addLine(to: c + (d + n) * a)
             path.move(to: c + (d - n) * -a)
@@ -104,8 +130,15 @@ enum StitchSymbol {
         case .regular:
             // 根元ごとに1本描く。n目一度は根元が複数あり、頭で集まる
             let roots = stitch.bases.isEmpty ? [virtualRoot(for: stitch, style: style)] : stitch.bases
+            let cross: CrossPlacement = if stitch.bases.count > 1 {
+                .nearRoot
+            } else if stitch.sharedBaseCount > 1 {
+                .nearHead
+            } else {
+                .middle
+            }
             for root in roots {
-                let stroke = strokePath(kind: stitch.kind, from: root, to: stitch.head, style: style)
+                let stroke = strokePath(kind: stitch.kind, from: root, to: stitch.head, style: style, cross: cross)
                 if !stroke.isEmpty {
                     context.stroke(stroke, with: .color(color), lineWidth: style.lineWidth)
                 }
@@ -214,14 +247,14 @@ struct StitchSymbolCatalogView: View {
                 let baseline = size.height * 0.85
                 let top = baseline - style.unit
                 var x: CGFloat = 30
-                // 細編み2目編み入れる（根元を共有）
+                // 細編み2目編み入れる（根元を共有、×は頭側）
                 for dx in [-10.0, 10.0] {
-                    context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: CGPoint(x: x, y: baseline), to: CGPoint(x: x + dx, y: top), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                    context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: CGPoint(x: x, y: baseline), to: CGPoint(x: x + dx, y: top), style: style, cross: .nearHead), with: .color(.primary), lineWidth: style.lineWidth)
                 }
                 x += 60
-                // 細編み2目一度（頭で集まる）
+                // 細編み2目一度（頭で集まる、×は根元側）
                 for dx in [-10.0, 10.0] {
-                    context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: CGPoint(x: x + dx, y: baseline), to: CGPoint(x: x, y: top), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                    context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: CGPoint(x: x + dx, y: baseline), to: CGPoint(x: x, y: top), style: style, cross: .nearRoot), with: .color(.primary), lineWidth: style.lineWidth)
                 }
                 x += 60
                 // 長編み3目編み入れる

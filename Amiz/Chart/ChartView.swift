@@ -54,21 +54,16 @@ struct ChartView: View {
             context.stroke(Path(ellipseIn: rect), with: .color(.secondary.opacity(0.15)), lineWidth: 0.5)
         }
 
-        // 目
+        // 目。次に拾う前段の目は記号そのものを太い赤で描く（ハイライト）
+        let highlightStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 2.2)
         for stitch in layout.stitches {
             let scaled = transform.apply(to: stitch)
-            let isCurrent = stitch.rowIndex == currentRowIndex
-            let color: Color = isCurrent ? .accentColor : .primary
-            StitchSymbol.draw(scaled, in: &context, color: color, style: style)
-        }
-
-        // 次に拾う目のハイライト（頭の周りに丸）
-        if let highlighted {
-            let head = transform.toScreen(highlighted.head)
-            let radius = transform.unit * 0.45
-            let rect = CGRect(x: head.x - radius, y: head.y - radius, width: radius * 2, height: radius * 2)
-            context.fill(Path(ellipseIn: rect), with: .color(.red.opacity(0.18)))
-            context.stroke(Path(ellipseIn: rect), with: .color(.red), lineWidth: 1.5)
+            if let highlighted, stitch.ref == highlighted.ref {
+                StitchSymbol.draw(scaled, in: &context, color: .red, style: highlightStyle)
+            } else {
+                let isCurrent = stitch.rowIndex == currentRowIndex
+                StitchSymbol.draw(scaled, in: &context, color: isCurrent ? .accentColor : .primary, style: style)
+            }
         }
 
         // 段番号（段の始まりの少し手前に置く）

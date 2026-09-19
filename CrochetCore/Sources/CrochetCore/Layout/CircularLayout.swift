@@ -5,11 +5,12 @@ import Foundation
 ///
 /// 考え方：
 /// - 段ごとの半径は、作り目からの段の高さ（鎖○目分）の累計
-/// - 目の「頭」は拾った前段の目の頭の真上（同じ角度）に置く。同じ目に複数編み入れた場合（増し目）は、
-///   前段の1目分の幅の中で均等に広げる。n目一度は拾った目の角度の中間。鎖編みは前後の目の間に均等に並べる
 /// - 「根元」は拾った前段の目の頭の角度に置く
-/// - これで、増減なしの段は放射状、増し目は左右対称のV字、減らし目は逆V字になり、
-///   拾いすぎや拾い残しはそのまま図のずれとして見える
+/// - **終わった段**：数える目の「頭」を円周に等間隔に並べる（実物の編み図と同じ）。並び全体の回転量は、
+///   頭と根元のずれの平均が 0 になるように決める。増し目は根元を共有して頭が広がる V字、減らし目は逆V字、
+///   増減なしの段は放射状になる。拾いすぎ・拾い残しは記号の傾きとして見える
+/// - **入力中の段**（最後の段で、まだ閉じていない）：頭を拾った前段の目の真上に置く。増し目は前段1目分の幅の中で
+///   均等に広げ、鎖は前後の目の間に均等に並べる。編んだところまでが前段の上に並び、円周に散らばらない
 /// - 角度は3時の位置が 0 で、画面上で反時計回りに進む
 public enum CircularLayout {
     public struct Options: Hashable, Sendable {
@@ -50,9 +51,12 @@ public enum CircularLayout {
                 return stitch.picks.map { previousAngle(at: $0, in: previousHeadAngles) }
             }
 
-            let headAngles = headAngles(
+            let isClosed = row.stitches.contains { $0.role == .closingSlipStitch }
+            let isLastRow = rowIndex == expansion.rows.count - 1
+            let (headAngles, groupSizes) = headAngles(
                 for: counted.map(\.element), baseAngles: baseAngles, rowIndex: rowIndex,
-                previousStep: previousStep, isClosed: row.stitches.contains { $0.role == .closingSlipStitch }
+                previousStep: previousStep, isClosed: isClosed,
+                followsBases: isLastRow && !isClosed, previousFirstHead: previousHeadAngles.first
             )
 
             var countedIndexByStitchIndex: [Int: Int] = [:]
@@ -74,6 +78,7 @@ public enum CircularLayout {
                     laidOut = make(
                         stitch, rowIndex: rowIndex, countedIndex: countedIndex,
                         headAngle: headAngle, outerRadius: outerRadius, bases: bases,
+                        sharedBaseCount: groupSizes[countedIndex],
                         center: center, options: options
                     )
                 } else {
@@ -112,33 +117,59 @@ public enum CircularLayout {
 
     // MARK: - 頭の角度
 
-    /// 数える目の頭の角度を決める
+    /// 数える目の頭の角度と、同じ根元を共有する目の数を決める
+    /// - Parameters:
+    ///   - followsBases: true なら入力中の段として前段の真上に置く。false なら終わった段として等間隔に並べる
     private static func headAngles(
         for counted: [ExpandedStitch], baseAngles: [[Double]], rowIndex: Int,
-        previousStep: Double, isClosed: Bool
-    ) -> [Double] {
+        previousStep: Double, isClosed: Bool, followsBases: Bool, previousFirstHead: Double?
+    ) -> (angles: [Double], groupSizes: [Int]) {
         let count = counted.count
-        guard count > 0 else { return [] }
+        guard count > 0 else { return ([], []) }
+
+        // 同じ編み入れ先を共有する続きの目（増し目）のまとまりの大きさ
+        var groupSizes = [Int](repeating: 1, count: count)
+        var groupStart = 0
+        while groupStart < count {
+            var end = groupStart
+            if !baseAngles[groupStart].isEmpty {
+                while end + 1 < count, counted[end + 1].picks == counted[groupStart].picks, !baseAngles[end + 1].isEmpty {
+                    end += 1
+                }
+            }
+            for stitchIndex in groupStart...end {
+                groupSizes[stitchIndex] = end - groupStart + 1
+            }
+            groupStart = end + 1
+        }
 
         // 1段目（わの作り目）：等間隔に1周
         if rowIndex == 0 {
-            return (0..<count).map { previousStep * Double($0) }
+            return ((0..<count).map { previousStep * Double($0) }, groupSizes)
+        }
+
+        // 終わった段：等間隔に1周。回転量は頭と根元のずれの平均が 0 になるように
+        if !followsBases {
+            let step = (2 * Double.pi) / Double(count)
+            var offsets: [Double] = []
+            for (index, bases) in baseAngles.enumerated() where !bases.isEmpty {
+                offsets.append(meanAngle(bases) - step * Double(index))
+            }
+            let rotation = offsets.isEmpty ? (previousFirstHead ?? 0) : meanAngle(offsets)
+            return ((0..<count).map { rotation + step * Double($0) }, groupSizes)
         }
 
         var angles = [Double?](repeating: nil, count: count)
 
-        // 根元のある目：同じ編み入れ先を共有する続きの目をまとめ、前段の1目分の幅の中で均等に広げる
+        // 入力中の段：根元のある目は、まとまりごとに前段の1目分の幅の中で均等に広げる
         var index = 0
         while index < count {
             guard !baseAngles[index].isEmpty else {
                 index += 1
                 continue
             }
-            var end = index
-            while end + 1 < count, counted[end + 1].picks == counted[index].picks, !baseAngles[end + 1].isEmpty {
-                end += 1
-            }
-            let groupSize = end - index + 1
+            let groupSize = groupSizes[index]
+            let end = index + groupSize - 1
             let base = meanAngle(baseAngles[index])
             for (position, stitchIndex) in (index...end).enumerated() {
                 angles[stitchIndex] = base + previousStep * ((Double(position) + 0.5) / Double(groupSize) - 0.5)
@@ -186,7 +217,7 @@ public enum CircularLayout {
             index = end + 1
         }
 
-        return angles.map { $0 ?? 0 }
+        return (angles.map { $0 ?? 0 }, groupSizes)
     }
 
     // MARK: - 補助
@@ -194,7 +225,7 @@ public enum CircularLayout {
     /// 1目分の `LaidOutStitch` を作る
     private static func make(
         _ stitch: ExpandedStitch, rowIndex: Int, countedIndex: Int?,
-        headAngle: Double, outerRadius: Double, bases: [CGPoint],
+        headAngle: Double, outerRadius: Double, bases: [CGPoint], sharedBaseCount: Int = 1,
         center: CGPoint, options: Options
     ) -> LaidOutStitch {
         let head = point(center: center, radius: outerRadius, angle: headAngle)
@@ -211,7 +242,7 @@ public enum CircularLayout {
         }
         return LaidOutStitch(
             ref: stitch.ref, kind: stitch.kind, role: stitch.role, into: stitch.into, isCounted: stitch.isCounted,
-            rowIndex: rowIndex, countedIndex: countedIndex, head: head, bases: bases,
+            rowIndex: rowIndex, countedIndex: countedIndex, head: head, bases: bases, sharedBaseCount: sharedBaseCount,
             angle: direction, height: drawHeight(of: stitch, options: options),
             polarAngle: headAngle, polarRadius: outerRadius
         )
