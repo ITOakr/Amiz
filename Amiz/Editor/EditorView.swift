@@ -1,14 +1,15 @@
 import SwiftUI
 import CrochetCore
 
-/// 仮の編集画面（plan.md フェーズ2・3）。
+/// 編集画面（ui-spec 5章）。iPhone の配置（5-2）：上から ツールバー（E）→ 図／目数表のタブ（A／B）→ 現在の段（C）→ 編み目キーボード（D）。
 ///
-/// 本番の配置（ui-spec 5-2）はフェーズ4で作り直す。ここでは上から
-/// 仮の設定 → 図（A）／目数表（B）のタブ → 現在の段（C）→ 編み目キーボード（D）を縦に並べる。
+/// iPad の配置はフェーズ4-2 で追加する。`NavigationStack` の中に置く前提（ツールバーは navigation bar に出す）。
 struct EditorView: View {
     /// 編集の状態。`@State` で View が持ち主になる（React の useState でオブジェクトを持つのに近い）
     @State private var model: EditorModel
-    /// 立ち上がりの鎖の自動入力（ui-spec 6-3。仮の切り替えをこの画面に置く）
+    /// 作品名（ツールバーに表示。保存はフェーズ4-6）
+    let title: String
+    /// 立ち上がりの鎖の自動入力（ui-spec 6-3）
     @AppStorage(AppSettings.autoTurningChainKey) private var autoTurningChain = true
     /// 図に段番号を表示（ui-spec 6-3）
     @AppStorage(AppSettings.showsRowNumbersKey) private var showsRowNumbers = true
@@ -20,28 +21,18 @@ struct EditorView: View {
         case table = "目数表"
     }
 
-    init(model: EditorModel = EditorModel()) {
+    init(model: EditorModel = EditorModel(), title: String = "新しい作品") {
         _model = State(initialValue: model)
+        self.title = title
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            settingsBar
-            Picker("表示", selection: $tab) {
-                ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 6)
+            tabPicker
             Divider()
             switch tab {
             case .chart:
-                ChartView(
-                    layout: model.layout,
-                    currentRowIndex: model.currentRowIndex,
-                    highlighted: model.nextStitchToPick,
-                    showsRowNumbers: showsRowNumbers
-                )
+                chart
             case .table:
                 StitchTableView(model: model)
             }
@@ -50,31 +41,84 @@ struct EditorView: View {
             Divider()
             StitchKeyboardView(model: model)
         }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbarContent }
         .onChange(of: autoTurningChain, initial: true) { _, isOn in
             model.autoTurningChain = isOn
         }
     }
 
-    /// 仮の設定：立ち上がりの自動入力、段番号、元に戻す／やり直し
-    private var settingsBar: some View {
-        HStack(spacing: 12) {
-            Toggle("立ち上がりを自動で", isOn: $autoTurningChain)
-                .font(.footnote)
-            Toggle("段番号", isOn: $showsRowNumbers)
-                .font(.footnote)
+    // MARK: - ツールバー（E）
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            VStack(spacing: 0) {
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text("\(model.pattern.method.japaneseName)・\(model.pattern.foundation.japaneseName)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        ToolbarItemGroup(placement: .topBarTrailing) {
             Button("元に戻す", systemImage: "arrow.uturn.backward") { model.undo() }
                 .disabled(!model.canUndo)
                 .accessibilityIdentifier("op.undo")
             Button("やり直し", systemImage: "arrow.uturn.forward") { model.redo() }
                 .disabled(!model.canRedo)
                 .accessibilityIdentifier("op.redo")
+            Menu("その他", systemImage: "ellipsis.circle") {
+                // 色の編集はフェーズ9、書き出しはフェーズ5で有効にする
+                Button("色を編集", systemImage: "paintpalette") {}
+                    .disabled(true)
+                Button("書き出し", systemImage: "square.and.arrow.up") {}
+                    .disabled(true)
+                Divider()
+                // 設定画面（フェーズ4-7）ができるまでの仮置き
+                Toggle("立ち上がりの鎖を自動で入れる", isOn: $autoTurningChain)
+                Toggle("図に段番号を表示", isOn: $showsRowNumbers)
+            }
+            .accessibilityIdentifier("toolbar.more")
         }
-        .labelStyle(.iconOnly)
+    }
+
+    // MARK: - 図／目数表（A／B）
+
+    private var tabPicker: some View {
+        Picker("表示", selection: $tab) {
+            ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+    }
+
+    private var chart: some View {
+        ChartView(
+            layout: model.layout,
+            currentRowIndex: model.currentRowIndex,
+            highlighted: model.nextStitchToPick,
+            showsRowNumbers: showsRowNumbers
+        )
+        .overlay(alignment: .topLeading) {
+            // 凡例（モックに合わせる）
+            HStack(spacing: 4) {
+                Circle().fill(.red).frame(width: 8, height: 8)
+                Text("次に拾う目")
+            }
+            .font(.caption2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.regularMaterial, in: Capsule())
+            .padding(8)
+        }
     }
 }
 
 #Preview("くまの頭") {
-    EditorView(model: EditorModel(pattern: SamplePatterns.bearHead))
+    NavigationStack {
+        EditorView(model: EditorModel(pattern: SamplePatterns.bearHead), title: "くまの頭")
+    }
 }
