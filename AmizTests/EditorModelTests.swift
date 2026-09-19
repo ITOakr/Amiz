@@ -1,0 +1,117 @@
+import Testing
+import CrochetCore
+@testable import Amiz
+
+@Suite("編集の状態管理（EditorModel）")
+struct EditorModelTests {
+    /// TC-1「くまの頭」の1〜3段目をボタン操作で入力する
+    private func inputFirstThreeRows(into model: EditorModel) {
+        // 1段目：細編み6目、段を終える
+        for _ in 0..<6 { model.pressStitch(.singleCrochet) }
+        model.pressFinishRow()
+
+        // 2段目：残りすべてに + 2目編み入れる → 細編み
+        model.toggleUntilEnd()
+        model.toggleIncrease()
+        model.pressStitch(.singleCrochet)
+        model.pressFinishRow()
+
+        // 3段目：繰り返し開始 → 細編み、2目編み入れる → 繰り返し終了 ×6
+        model.pressBeginRepeat()
+        model.pressStitch(.singleCrochet)
+        model.toggleIncrease()
+        model.pressStitch(.singleCrochet)
+        model.pressEndRepeat(count: .times(6))
+        model.pressFinishRow()
+    }
+
+    @Test("ボタン操作に相当する呼び出しで目数が 6/12/18 になる")
+    func pressesProduceCounts() {
+        let model = EditorModel()
+        inputFirstThreeRows(into: model)
+
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 0])
+        #expect(model.currentRowIndex == 3)
+        #expect(model.warnings.isEmpty)
+        #expect(!model.modifier.isActive)
+        #expect(!model.isRepeating)
+    }
+
+    @Test("先に選ぶ状態は目ボタンで解除される。繰り返し開始の位置は立ち上がりの自動挿入でずれる")
+    func modifierAndRepeatStart() {
+        let model = EditorModel()
+        model.toggleIncrease()
+        #expect(model.modifier.group == .increase(count: 2))
+        model.pressStitch(.singleCrochet)
+        #expect(!model.modifier.isActive)
+        model.pressFinishRow()
+
+        // 段の先頭で繰り返し開始 → 最初の細編みで立ち上がりが入り、開始位置が 0 → 1 になる
+        model.pressBeginRepeat()
+        #expect(model.repeatStartIndex == 0)
+        model.pressStitch(.singleCrochet)
+        #expect(model.repeatStartIndex == 1)
+        #expect(model.pendingRepeatUnit?.count == 1)
+        #expect(model.canEndRepeatUntilEnd)
+    }
+
+    @Test("元に戻す → やり直し")
+    func undoRedo() {
+        let model = EditorModel()
+        #expect(!model.canUndo)
+
+        inputFirstThreeRows(into: model)
+        #expect(model.canUndo)
+        #expect(!model.canRedo)
+
+        // 段を終えるを戻す → 3段目が入力中に戻る
+        model.undo()
+        #expect(model.pattern.rows.count == 3)
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18])
+        #expect(model.canRedo)
+
+        // 繰り返し終了を戻す → 3段目は 立ち上がり・細編み・増し目 の3操作
+        model.undo()
+        #expect(model.pattern.rows[2].steps.count == 3)
+        #expect(model.expansion.rows[2].totalCount == 3)
+
+        // やり直し2回で元に戻る
+        model.redo()
+        model.redo()
+        #expect(model.pattern.rows.count == 4)
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 0])
+        #expect(!model.canRedo)
+
+        // 戻した後に別の操作をすると、やり直しの履歴は消える
+        model.undo()
+        model.pressStitch(.singleCrochet)
+        #expect(!model.canRedo)
+        #expect(model.pattern.rows.count == 3)
+    }
+
+    @Test("1目削除は繰り返しごと消し、空の段では段を終えるを取り消す")
+    func deleteLast() {
+        let model = EditorModel()
+        inputFirstThreeRows(into: model)
+
+        model.pressDeleteLast()  // 空の4段目 → 3段目の引き抜きが外れて入力中に戻る
+        #expect(model.pattern.rows.count == 3)
+        #expect(model.currentRow?.totalCount == 18)
+
+        model.pressDeleteLast()  // （細編み、増し目）×6 が丸ごと消える
+        #expect(model.currentRow?.totalCount == 0)
+        #expect(model.pattern.rows[2].steps.count == 1)  // 立ち上がりだけ残る
+    }
+
+    @Test("立ち上がりの自動入力をオフにすると入らない")
+    func autoTurningChainOff() {
+        let model = EditorModel()
+        model.autoTurningChain = false
+        model.pressStitch(.singleCrochet)
+        #expect(model.pattern.rows[0].steps.count == 1)
+
+        model.pressTurningChain(chains: 1)
+        #expect(model.pattern.rows[0].steps.count == 2)
+        #expect(model.pattern.rows[0].steps[0].kind == .turningChain(chains: 1))
+    }
+}
