@@ -52,7 +52,10 @@ struct EditorView: View {
             Divider()
             CurrentRowView(model: model)
             Divider()
-            if model.selection != nil {
+            if model.editingSession != nil {
+                EditingBar(model: model)
+                Divider()
+            } else if model.selection != nil {
                 SelectionBar(model: model)
                 Divider()
             }

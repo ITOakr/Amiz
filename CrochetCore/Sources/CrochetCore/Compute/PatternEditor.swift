@@ -60,8 +60,9 @@ public enum PatternEditor {
         let index = edit.rowIndex
         precondition(pattern.rows.indices.contains(index), "段の位置が範囲外です: \(index)")
 
-        let hasRowsAbove = index < pattern.rows.count - 1
-        let rowsAbove: ClosedRange<Int>? = hasRowsAbove ? (index + 2)...pattern.rows.count : nil
+        // 上の段：編集した段より後ろで、目のある段まで（末尾の空の段＝入力を始めていない段は影響を受けない）
+        let lastNonEmpty = pattern.rows.lastIndex { !$0.steps.isEmpty } ?? -1
+        let rowsAbove: ClosedRange<Int>? = lastNonEmpty > index ? (index + 2)...(lastNonEmpty + 1) : nil
 
         switch edit {
         case .replace(_, let newRow):

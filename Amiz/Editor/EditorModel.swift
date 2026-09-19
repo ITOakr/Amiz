@@ -23,6 +23,19 @@ final class EditorModel {
     private(set) var selection: StitchRef?
     /// 確認待ちの修正（ui-spec 7-1）。画面がこれを見てダイアログを出す
     private(set) var pendingConfirmation: PendingConfirmation?
+    /// 過去の段を編集中（状態 S4。ui-spec U16）。作業用のコピーに入力し、「完了」で編み図に反映する
+    private(set) var editingSession: RowEditingSession?
+
+    /// 過去の段の編集（U16）
+    struct RowEditingSession {
+        let rowIndex: Int
+        /// 作業用のコピー（「完了」までは編み図に反映しない）
+        var row: Row
+        /// 入力位置（操作の間。0 なら先頭）
+        var cursor: Int
+        /// 編集中の繰り返し開始の位置
+        var repeatStartIndex: Int?
+    }
 
     /// 目数が変わる修正の確認待ち。「上の段を残す」なら `edited` をそのまま使い、「ほどく」なら上の段を消す
     struct PendingConfirmation {
@@ -63,6 +76,24 @@ final class EditorModel {
         self.layout = pattern.circularLayout(expansion: expansion)
     }
 
+    /// 画面に出す編み図。過去の段を編集中は、その段を作業用のコピーに差し替えたもの
+    var displayedPattern: Pattern {
+        guard let session = editingSession else { return pattern }
+        var preview = pattern
+        preview.rows[session.rowIndex] = session.row
+        return preview
+    }
+
+    /// 今、入力の対象になっている段の位置（編集中ならその段、そうでなければ入力中の段）
+    var activeRowIndex: Int? {
+        editingSession?.rowIndex ?? currentRowIndex
+    }
+
+    /// 今、入力の対象になっている段の展開結果
+    var activeRow: RowExpansion? {
+        activeRowIndex.map { expansion.rows[$0] }
+    }
+
     /// 新しい作品（わの作り目・輪編み）で始める
     convenience init() {
         self.init(pattern: Pattern(method: .joinedRounds, foundation: .magicRing))
@@ -87,7 +118,7 @@ final class EditorModel {
 
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
-    var isRepeating: Bool { repeatStartIndex != nil }
+    var isRepeating: Bool { (editingSession?.repeatStartIndex ?? repeatStartIndex) != nil }
 
     /// 入力中の段の操作の列
     var currentRowSteps: [Step] {
@@ -102,10 +133,22 @@ final class EditorModel {
     /// 目数表の行（入力中の段を除く。同じ内容の段はまとめる。ui-spec 5-4）
     var finishedTableRows: [StitchTableRow] {
         guard let current = currentRowIndex else { return [] }
-        var finished = pattern
+        var finished = displayedPattern
         finished.rows.removeLast()
         let finishedExpansion = PatternExpansion(rows: Array(expansion.rows[..<current]))
         return StitchTableFormatter.tableRows(for: finished, expansion: finishedExpansion, warnings: warnings)
+    }
+
+    /// 1段分の目数表の行（まとめた行を展開して表示するときに使う）
+    func singleTableRow(at index: Int) -> StitchTableRow {
+        let shown = displayedPattern
+        return StitchTableRow(
+            rowNumbers: (index + 1)...(index + 1),
+            rowIDs: [shown.rows[index].id],
+            instruction: StitchTableFormatter.instruction(for: shown.rows[index], rowIndex: index, in: shown),
+            countText: StitchTableFormatter.countText(for: expansion.rows[index]),
+            isUnchangedRun: index > 0 && expansion.rows[index].totalCount == expansion.rows[index - 1].totalCount
+        )
     }
 
     /// 段の位置ごとの警告（目数表で引く）
@@ -133,6 +176,10 @@ final class EditorModel {
 
     /// 「繰り返し開始」から今までの操作（繰り返し終了の確認に表示する）
     var pendingRepeatUnit: [Step]? {
+        if let session = editingSession {
+            guard let start = session.repeatStartIndex, start <= session.cursor else { return nil }
+            return Array(session.row.steps[start..<session.cursor])
+        }
         guard let start = repeatStartIndex, let index = currentRowIndex else { return nil }
         let steps = pattern.rows[index].steps
         guard start <= steps.count else { return nil }
@@ -146,6 +193,21 @@ final class EditorModel {
         if selection != nil {
             modifier = .none
             request(.changeKind(kind))
+            return
+        }
+        if editingSession != nil {
+            let modifier = self.modifier
+            self.modifier = .none
+            editRow { session, method in
+                let result = PatternInput.insertStitch(
+                    kind, modifier: modifier, at: session.cursor, in: &session.row,
+                    method: method, autoTurningChain: autoTurningChain
+                )
+                session.cursor = result.stepIndex + 1
+                if result.insertedTurningChain, let start = session.repeatStartIndex {
+                    session.repeatStartIndex = start + 1
+                }
+            }
             return
         }
         let modifier = self.modifier
@@ -166,6 +228,13 @@ final class EditorModel {
 
     /// 「飛ばす」（選択状態にならず、押すたびに1目飛ばす）
     func pressSkip() {
+        if editingSession != nil {
+            editRow { session, _ in
+                PatternInput.insertSkip(at: session.cursor, in: &session.row)
+                session.cursor += 1
+            }
+            return
+        }
         mutate { pattern in
             PatternInput.addSkip(to: &pattern)
         }
@@ -180,9 +249,20 @@ final class EditorModel {
 
     // MARK: - 段の操作
 
-    /// 「1目削除」
+    /// 「1目削除」。編集中は入力位置の直前を消す
     func pressDeleteLast() {
         modifier = .none
+        if editingSession != nil {
+            editRow { session, _ in
+                if PatternInput.deleteStep(before: session.cursor, in: &session.row) {
+                    session.cursor -= 1
+                    if let start = session.repeatStartIndex, start > session.cursor {
+                        session.repeatStartIndex = nil
+                    }
+                }
+            }
+            return
+        }
         mutate { pattern in
             PatternInput.deleteLastStep(from: &pattern)
         }
@@ -207,6 +287,7 @@ final class EditorModel {
     /// 「段を終える」。残っている前段の目の確認（7-2）は画面側が先に行う。
     /// - Parameter leavingRemaining: 確認で「残りは編まない」を選んだとき true（1回の操作として元に戻せる）
     func pressFinishRow(leavingRemaining: Bool = false) {
+        guard editingSession == nil else { return }
         modifier = .none
         repeatStartIndex = nil
         mutate { pattern in
@@ -217,8 +298,12 @@ final class EditorModel {
         }
     }
 
-    /// 「繰り返し開始」：今の段の操作数を覚える（段がまだなければ 0）
+    /// 「繰り返し開始」：今の段の操作数を覚える（段がまだなければ 0）。編集中は入力位置を覚える
     func pressBeginRepeat() {
+        if editingSession != nil {
+            editingSession?.repeatStartIndex = editingSession?.cursor
+            return
+        }
         repeatStartIndex = pattern.rows.last?.steps.count ?? 0
     }
 
@@ -226,6 +311,18 @@ final class EditorModel {
     /// - Returns: まとめられたか（単位が空などのときは false で、開始位置は残る）
     @discardableResult
     func pressEndRepeat(count: RepeatCount) -> Bool {
+        if let session = editingSession, let start = session.repeatStartIndex {
+            var wrapped = false
+            editRow { session, _ in
+                let before = session.row.steps.count
+                wrapped = PatternInput.wrapRepeat(start..<session.cursor, count: count, in: &session.row)
+                if wrapped {
+                    session.cursor -= before - session.row.steps.count
+                    session.repeatStartIndex = nil
+                }
+            }
+            return wrapped
+        }
         guard let start = repeatStartIndex else { return false }
         var wrapped = false
         mutate { pattern in
@@ -240,6 +337,7 @@ final class EditorModel {
     /// 繰り返しの入力をやめる（まとめずに開始位置を忘れる）
     func cancelRepeat() {
         repeatStartIndex = nil
+        editingSession?.repeatStartIndex = nil
     }
 
     /// 「立ち上がり」ボタン
@@ -250,6 +348,58 @@ final class EditorModel {
                 repeatStartIndex = start + 1
             }
         }
+    }
+
+    // MARK: - 過去の段の編集（ui-spec U16）
+
+    /// 段の編集を始める。入力中の段（最後の段）は対象外
+    func beginEditingRow(at index: Int) {
+        guard let current = currentRowIndex, index < current, pattern.rows.indices.contains(index) else { return }
+        selection = nil
+        modifier = .none
+        let row = pattern.rows[index]
+        // 入力位置は段を閉じる引き抜きの手前（引き抜きの後ろには入れない）
+        let cursor = if case .closeRound = row.steps.last?.kind { row.steps.count - 1 } else { row.steps.count }
+        editingSession = RowEditingSession(rowIndex: index, row: row, cursor: cursor, repeatStartIndex: nil)
+        recompute()
+    }
+
+    /// 入力位置を動かす（操作の間の位置。0 なら先頭）
+    func moveCursor(to index: Int) {
+        guard var session = editingSession else { return }
+        var upper = session.row.steps.count
+        if case .closeRound = session.row.steps.last?.kind { upper -= 1 }
+        session.cursor = min(max(index, 0), upper)
+        editingSession = session
+    }
+
+    /// 「完了」：目数が変わり上に段があれば確認（7-1）、そうでなければそのまま反映
+    func finishEditingRow() {
+        guard let session = editingSession else { return }
+        let edit = RowEdit.replace(rowIndex: session.rowIndex, with: session.row)
+        let impact = PatternEditor.impact(of: edit, on: pattern)
+        if impact.needsConfirmation {
+            pendingConfirmation = PendingConfirmation(impact: impact, rowIndex: session.rowIndex, editedRow: session.row)
+        } else {
+            editingSession = nil
+            mutate { $0 = PatternEditor.applyKeepingRowsAbove(edit, to: $0) }
+            recompute()
+        }
+    }
+
+    /// 編集をやめて元に戻す
+    func cancelEditingRow() {
+        editingSession = nil
+        modifier = .none
+        recompute()
+    }
+
+    /// 作業用のコピーを変更して表示を更新する
+    private func editRow(_ change: (inout RowEditingSession, WorkingMethod) -> Void) {
+        guard var session = editingSession else { return }
+        change(&session, pattern.method)
+        editingSession = session
+        recompute()
     }
 
     // MARK: - 目の選択（ui-spec U15）
@@ -334,11 +484,15 @@ final class EditorModel {
         guard let pending = pendingConfirmation else { return }
         pendingConfirmation = nil
         let edit = RowEdit.replace(rowIndex: pending.rowIndex, with: pending.editedRow)
+        editingSession = nil
         mutate { pattern in
             pattern = keepingRowsAbove
                 ? PatternEditor.applyKeepingRowsAbove(edit, to: pattern)
                 : PatternEditor.applyUnravelingRowsAbove(edit, to: pattern)
+            // ほどいて最後の段が閉じた段になったら、続きを入力する空の段を足す
+            PatternInput.ensureOpenRow(in: &pattern)
         }
+        recompute()
         selection = nil
     }
 
@@ -376,15 +530,17 @@ final class EditorModel {
     /// 元に戻す／やり直しで編み図を差し替える。先に選ぶ状態と繰り返し開始の位置はずれるので解除する
     private func replacePattern(with newPattern: Pattern) {
         pattern = newPattern
+        editingSession = nil
         recompute()
         modifier = .none
         repeatStartIndex = nil
         selection = nil
     }
 
-    /// 展開結果とレイアウトを計算し直す
+    /// 展開結果とレイアウトを計算し直す（編集中は作業用のコピーを差し込んだ編み図から）
     private func recompute() {
-        expansion = pattern.expanded()
-        layout = pattern.circularLayout(expansion: expansion)
+        let shown = displayedPattern
+        expansion = shown.expanded()
+        layout = shown.circularLayout(expansion: expansion)
     }
 }

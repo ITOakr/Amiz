@@ -215,8 +215,10 @@ struct EditorModelTests {
         model.select(StitchRef(rowID: row1.id, stepID: row1.steps[1].id))
         model.request(.delete)
         model.resolveConfirmation(keepingRowsAbove: false)
-        #expect(model.pattern.rows.count == 1)
-        #expect(model.expansion.rows.map(\.totalCount) == [5])
+        // ほどいた後は、続きを入力する空の段が足される
+        #expect(model.pattern.rows.count == 2)
+        #expect(model.expansion.rows.map(\.totalCount) == [5, 0])
+        #expect(model.currentRowIndex == 1)
     }
 
     @Test("選択：TC-5 の画面版。過去の段の細編みを中長編みにしても確認は出ない")
@@ -231,5 +233,81 @@ struct EditorModelTests {
         #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 24, 4])
         #expect(model.warnings.isEmpty)
         #expect(model.expansion.rows[2].stitches.filter { $0.kind == .halfDoubleCrochet }.count == 6)
+    }
+
+    @Test("段の編集：TC-2 の画面版。1段目に1目足して完了 → 確認 → 残すと 7/14/18/24、ほどくと1段目＋空の段")
+    func editRowTC2() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+        model.beginEditingRow(at: 0)
+        #expect(model.editingSession?.cursor == 7)  // 引き抜きの手前
+        #expect(model.activeRowIndex == 0)
+
+        model.pressStitch(.singleCrochet)
+        #expect(model.editingSession?.row.steps.count == 9)
+        #expect(model.activeRow?.totalCount == 7)      // 作業用のコピーで目数が変わる
+        #expect(model.pattern.rows[0].steps.count == 8)  // 編み図はまだそのまま
+        #expect(!model.canUndo)                          // 完了までは履歴に積まない
+
+        model.finishEditingRow()
+        #expect(model.pendingConfirmation?.message == "1段目の目数が6目から7目に変わりました。2〜5段目に影響があります。")
+        #expect(model.editingSession != nil)  // 確認中はまだ編集中
+
+        // キャンセル → 編集中に戻る
+        model.cancelConfirmation()
+        #expect(model.editingSession != nil)
+
+        // 上の段を残す
+        model.finishEditingRow()
+        model.resolveConfirmation(keepingRowsAbove: true)
+        #expect(model.editingSession == nil)
+        #expect(model.expansion.rows.map(\.totalCount) == [7, 14, 18, 24, 4])
+        #expect(model.warnings.map(\.rowNumber) == [3])
+        #expect(model.canUndo)
+        model.undo()
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 24, 4])
+
+        // 上の段をほどく
+        model.beginEditingRow(at: 0)
+        model.pressStitch(.singleCrochet)
+        model.finishEditingRow()
+        model.resolveConfirmation(keepingRowsAbove: false)
+        // ほどいた後は、続きを入力する空の段が足される
+        #expect(model.pattern.rows.count == 2)
+        #expect(model.expansion.rows.map(\.totalCount) == [7, 0])
+    }
+
+    @Test("段の編集：目数が変わらなければ確認なしで反映される。入力位置の移動と削除")
+    func editRowWithoutCountChange() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+        model.beginEditingRow(at: 0)
+
+        // 入力位置を先頭の細編みの後ろ（立ち上がりの次）に動かし、その直前の細編みを消して中長編みを入れる
+        model.moveCursor(to: 2)
+        model.pressDeleteLast()
+        #expect(model.editingSession?.cursor == 1)
+        model.pressStitch(.halfDoubleCrochet)
+        #expect(model.editingSession?.cursor == 2)
+        #expect(model.activeRow?.totalCount == 6)
+
+        model.finishEditingRow()
+        #expect(model.pendingConfirmation == nil)
+        #expect(model.editingSession == nil)
+        #expect(model.pattern.rows[0].steps[1].kind == .stitch(.halfDoubleCrochet))
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 24, 4])
+        #expect(model.warnings.isEmpty)
+    }
+
+    @Test("段の編集：キャンセルで元に戻る。入力中の段は編集の対象にならない")
+    func editRowCancel() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+        model.beginEditingRow(at: 4)  // 入力中の段
+        #expect(model.editingSession == nil)
+
+        model.beginEditingRow(at: 1)
+        model.pressStitch(.singleCrochet)
+        #expect(model.activeRow?.totalCount == 13)
+        model.cancelEditingRow()
+        #expect(model.editingSession == nil)
+        #expect(model.expansion.rows[1].totalCount == 12)
     }
 }

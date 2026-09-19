@@ -2,15 +2,25 @@ import SwiftUI
 import CrochetCore
 
 /// 目数表（ui-spec 5-4 の B）。1行につき1段。同じ内容の段はまとめ、入力中の段は「入力中」と出す。
+/// 段をタップするとその段の編集に入る（U16）。まとめた行はタップで展開してから段を選ぶ。
 struct StitchTableView: View {
     let model: EditorModel
+
+    /// 展開して1段ずつ表示しているまとめ行（先頭の段番号で覚える）
+    @State private var expandedRuns: Set<Int> = []
 
     var body: some View {
         ScrollViewReader { proxy in
             List {
                 foundationRow
                 ForEach(model.finishedTableRows, id: \.rowNumbers) { row in
-                    finishedRow(row)
+                    if row.isMerged, expandedRuns.contains(row.rowNumbers.lowerBound) {
+                        ForEach(row.rowNumbers.map { $0 - 1 }, id: \.self) { index in
+                            finishedRow(model.singleTableRow(at: index))
+                        }
+                    } else {
+                        finishedRow(row)
+                    }
                 }
                 if let index = model.currentRowIndex {
                     currentRow(number: index + 1)
@@ -42,30 +52,52 @@ struct StitchTableView: View {
         }
     }
 
-    /// 段が終わった行。警告があれば色を変えて警告文を添える（domain-spec 23）
+    /// 段が終わった行。警告があれば色を変えて警告文を添える（domain-spec 23）。タップで編集（U16）
     private func finishedRow(_ row: StitchTableRow) -> some View {
         let warning = row.rowIDs.count == 1 ? model.warningsByRowIndex[row.rowNumbers.lowerBound - 1] : nil
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(row.rowNumberText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 56, alignment: .leading)
-                Text(row.instruction)
-                Spacer(minLength: 8)
-                Text(row.countText + (row.isUnchangedRun ? "（増減なし）" : ""))
-                    .font(.callout)
-                    .monospacedDigit()
+        let isEditing = model.editingSession?.rowIndex == row.rowNumbers.lowerBound - 1 && !row.isMerged
+        return Button {
+            if row.isMerged {
+                expandedRuns.insert(row.rowNumbers.lowerBound)
+            } else {
+                model.beginEditingRow(at: row.rowNumbers.lowerBound - 1)
             }
-            if let warning {
-                Text(warning.message)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.leading, 56)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(row.rowNumberText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 56, alignment: .leading)
+                    Text(row.instruction)
+                    Spacer(minLength: 8)
+                    if isEditing {
+                        Text("編集中")
+                            .font(.caption2)
+                            .foregroundStyle(.tint)
+                    }
+                    Text(row.countText + (row.isUnchangedRun ? "（増減なし）" : ""))
+                        .font(.callout)
+                        .monospacedDigit()
+                }
+                if let warning {
+                    Text(warning.message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.leading, 56)
+                }
             }
+            .contentShape(Rectangle())
         }
-        .listRowBackground(warning == nil ? Color.clear : Color.red.opacity(0.08))
+        .buttonStyle(.plain)
+        .listRowBackground(rowBackground(hasWarning: warning != nil, isEditing: isEditing))
         .accessibilityIdentifier("table.row.\(row.rowNumbers.lowerBound)")
+    }
+
+    private func rowBackground(hasWarning: Bool, isEditing: Bool) -> Color {
+        if isEditing { return Color.accentColor.opacity(0.12) }
+        if hasWarning { return Color.red.opacity(0.08) }
+        return .clear
     }
 
     /// 入力中の段の行（ui-spec 8章のサンプル：「4 | 入力中 | —」）
@@ -85,12 +117,6 @@ struct StitchTableView: View {
 }
 
 #Preview {
-    let model = EditorModel()
-    for _ in 0..<6 { model.pressStitch(.singleCrochet) }
-    model.pressFinishRow()
-    model.toggleUntilEnd()
-    model.toggleIncrease()
-    model.pressStitch(.singleCrochet)
-    model.pressFinishRow()
+    let model = EditorModel(pattern: SamplePatterns.bearHead)
     return StitchTableView(model: model)
 }
