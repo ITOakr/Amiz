@@ -31,4 +31,22 @@ enum SamplePatterns {
             Row(),
         ])
     }
+
+    /// 性能確認用の大きな作品：わの作り目から毎段6目ずつ増える平らな円（rows 段で約 3×rows×(rows+1) 目）
+    static func largeDisc(rows: Int) -> Pattern {
+        func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {
+            (0..<count).map { _ in .stitch(kind) }
+        }
+        var result = Pattern(method: .joinedRounds, foundation: .magicRing)
+        result.rows.append(Row(steps: [.turningChain(1)] + stitches(.singleCrochet, 6) + [.closeRound()]))
+        for row in 2...max(rows, 2) {
+            // 「（細編み row-2 目、増し目）×6」
+            result.rows.append(Row(steps: [
+                .turningChain(1),
+                .repeating(stitches(.singleCrochet, row - 2) + [.increase(.singleCrochet)], times: 6),
+                .closeRound(),
+            ]))
+        }
+        return result
+    }
 }

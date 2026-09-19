@@ -21,6 +21,9 @@ struct AmizApp: App {
                 EditorView(model: EditorModel(pattern: SamplePatterns.bearHead))
             case "motif":
                 EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif))
+            case "big":
+                // 性能確認：40段・約4900目
+                EditorView(model: EditorModel(pattern: SamplePatterns.largeDisc(rows: 40)))
             default:
                 EditorView()
             }
