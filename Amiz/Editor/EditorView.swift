@@ -7,8 +7,12 @@ import CrochetCore
 struct EditorView: View {
     /// 編集の状態。`@State` で View が持ち主になる（React の useState でオブジェクトを持つのに近い）
     @State private var model: EditorModel
-    /// 作品名（ツールバーに表示。保存はフェーズ4-6）
+    /// 作品名（ツールバーに表示）
     let title: String
+    /// 編み図が変わったときに呼ぶ（自動保存。tech-spec 6）。確認用の作品では nil
+    private let onPatternChange: ((Pattern) -> Void)?
+    /// 自動保存をまとめるための待ち（連続入力のたびに書き込まないように）
+    @State private var saveTask: Task<Void, Never>?
     /// 立ち上がりの鎖の自動入力（ui-spec 6-3）
     @AppStorage(AppSettings.autoTurningChainKey) private var autoTurningChain = true
     /// 図に段番号を表示（ui-spec 6-3）
@@ -21,9 +25,18 @@ struct EditorView: View {
         case table = "目数表"
     }
 
-    init(model: EditorModel = EditorModel(), title: String = "新しい作品") {
+    init(model: EditorModel = EditorModel(), title: String = "新しい作品", onPatternChange: ((Pattern) -> Void)? = nil) {
         _model = State(initialValue: model)
         self.title = title
+        self.onPatternChange = onPatternChange
+    }
+
+    /// 保存済みの作品を開く。編み図が変わるたびに作品へ自動保存する
+    init(work: Work) {
+        let pattern = work.loadPattern() ?? Pattern(method: work.method, foundation: .magicRing)
+        self.init(model: EditorModel(pattern: pattern), title: work.name) { pattern in
+            work.save(pattern: pattern)
+        }
     }
 
     var body: some View {
@@ -45,6 +58,25 @@ struct EditorView: View {
         .toolbar { toolbarContent }
         .onChange(of: autoTurningChain, initial: true) { _, isOn in
             model.autoTurningChain = isOn
+        }
+        .onChange(of: model.pattern) { _, pattern in
+            scheduleSave(pattern)
+        }
+        .onDisappear {
+            // 画面を閉じるときは待たずに保存する
+            saveTask?.cancel()
+            onPatternChange?(model.pattern)
+        }
+    }
+
+    /// 少し待ってから保存する。待っている間に次の変更が来たら待ち直す
+    private func scheduleSave(_ pattern: Pattern) {
+        guard let onPatternChange else { return }
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            onPatternChange(pattern)
         }
     }
 

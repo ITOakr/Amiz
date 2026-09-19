@@ -6,29 +6,54 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct AmizApp: App {
+    /// 作品の保存先。UI テスト中は専用のファイルに保存し、`--reset-store` で毎回空にする
+    private let container = AmizApp.makeContainer()
+
     var body: some Scene {
         WindowGroup {
-            // フェーズ2の仮の形：起動すると直接、わの作り目・輪編みの新しい作品の編集画面が開く。
-            // 作品一覧・新規作成・保存はフェーズ4で作る
-            // 確認用の切り替え（xcrun simctl launch の SIMCTL_CHILD_AMIZ_SCREEN や Xcode のスキームの環境変数で指定する）
-            NavigationStack {
-                switch ProcessInfo.processInfo.environment["AMIZ_SCREEN"] {
-                case "symbols":
-                    StitchSymbolCatalogView()
-                case "sample":
-                    EditorView(model: EditorModel(pattern: SamplePatterns.bearHead), title: "くまの頭")
-                case "motif":
-                    EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif), title: "花のモチーフ")
-                case "big":
-                    // 性能確認：40段・約4900目
-                    EditorView(model: EditorModel(pattern: SamplePatterns.largeDisc(rows: 40)), title: "大きな円")
-                default:
-                    EditorView()
-                }
+            // 確認用の切り替え（xcrun simctl launch の SIMCTL_CHILD_AMIZ_SCREEN や Xcode のスキームの環境変数で指定する）。
+            // 確認用の作品は保存しない
+            switch ProcessInfo.processInfo.environment["AMIZ_SCREEN"] {
+            case "symbols":
+                NavigationStack { StitchSymbolCatalogView() }
+            case "sample":
+                NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.bearHead), title: "くまの頭") }
+            case "motif":
+                NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif), title: "花のモチーフ") }
+            case "big":
+                // 性能確認：40段・約4900目
+                NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.largeDisc(rows: 40)), title: "大きな円") }
+            default:
+                RootView()
             }
+        }
+        // 作品の保存先（SwiftData）。React でいう Provider に近く、下の View から modelContext で使える
+        .modelContainer(container)
+    }
+
+    private static func makeContainer() -> ModelContainer {
+        let arguments = ProcessInfo.processInfo.arguments
+        do {
+            // ユニットテストのホストとして起動したときは、ファイルに書かない（テスト側が自分の保存先を作る）
+            if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+                return try ModelContainer(for: Work.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            }
+            if arguments.contains("--ui-testing") {
+                let url = URL.temporaryDirectory.appending(path: "amiz-uitest.store")
+                if arguments.contains("--reset-store") {
+                    for suffix in ["", "-shm", "-wal"] {
+                        try? FileManager.default.removeItem(at: URL(filePath: url.path + suffix))
+                    }
+                }
+                return try ModelContainer(for: Work.self, configurations: ModelConfiguration(url: url))
+            }
+            return try ModelContainer(for: Work.self)
+        } catch {
+            fatalError("作品の保存先を開けませんでした: \(error)")
         }
     }
 }
