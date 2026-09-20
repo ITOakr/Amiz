@@ -1,9 +1,11 @@
 import SwiftUI
 import CrochetCore
 
-/// 編集画面（ui-spec 5章）。iPhone の配置（5-2）：上から ツールバー（E）→ 図／目数表のタブ（A／B）→ 現在の段（C）→ 編み目キーボード（D）。
+/// 編集画面（ui-spec 5章）。`NavigationStack` の中に置く前提（ツールバーは navigation bar に出す）。
 ///
-/// iPad の配置はフェーズ4-2 で追加する。`NavigationStack` の中に置く前提（ツールバーは navigation bar に出す）。
+/// - iPhone と iPad 縦向き（5-2）：上から ツールバー（E）→ 図／目数表のタブ（A／B）→ 現在の段（C）→ 編み目キーボード（D）
+/// - iPad 横向き：左に図（上）と目数表（下）を同時に表示し、右に幅 392pt の固定レール（C と D）。
+///   向きは画面の縦横比で判定する（サイズクラスだけでは iPad の縦横を区別できないため）
 struct EditorView: View {
     /// 編集の状態。`@State` で View が持ち主になる（React の useState でオブジェクトを持つのに近い）
     @State private var model: EditorModel
@@ -40,26 +42,12 @@ struct EditorView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            tabPicker
-            Divider()
-            switch tab {
-            case .chart:
-                chart
-            case .table:
-                StitchTableView(model: model)
+        GeometryReader { geometry in
+            if Self.usesWideLayout(for: geometry.size) {
+                wideLayout
+            } else {
+                compactLayout
             }
-            Divider()
-            CurrentRowView(model: model)
-            Divider()
-            if model.editingSession != nil {
-                EditingBar(model: model)
-                Divider()
-            } else if model.selection != nil {
-                SelectionBar(model: model)
-                Divider()
-            }
-            StitchKeyboardView(model: model)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
@@ -91,6 +79,65 @@ struct EditorView: View {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
             onPatternChange(pattern)
+        }
+    }
+
+    /// iPad 横向きなら true（横長で、レールと図の両方が置ける幅があるとき）
+    static func usesWideLayout(for size: CGSize) -> Bool {
+        size.width > size.height && size.width >= 900
+    }
+
+    /// iPhone・iPad 縦向きの配置（ui-spec 5-2）
+    private var compactLayout: some View {
+        VStack(spacing: 0) {
+            tabPicker
+            Divider()
+            switch tab {
+            case .chart:
+                chart
+            case .table:
+                StitchTableView(model: model)
+            }
+            Divider()
+            CurrentRowView(model: model)
+            Divider()
+            contextBar
+            StitchKeyboardView(model: model)
+        }
+    }
+
+    /// iPad 横向きの配置（ui-spec 5-2）：左に図と目数表、右に固定レール
+    private var wideLayout: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                chart
+                Divider()
+                // 目数表は高さを決めて下に置く（図は残りの高さを使う）
+                StitchTableView(model: model)
+                    .frame(height: 260)
+            }
+            Divider()
+            VStack(spacing: 0) {
+                CurrentRowView(model: model)
+                Divider()
+                contextBar
+                StitchKeyboardView(model: model, isLarge: true)
+                Spacer(minLength: 0)
+            }
+            .frame(width: 392)
+            .background(Color(.secondarySystemBackground))
+        }
+    }
+
+    /// 編集中／選択中の操作バー（状態 S4／S6）
+    @ViewBuilder
+    private var contextBar: some View {
+        if model.editingSession != nil {
+            EditingBar(model: model)
+            Divider()
+        } else if model.selection != nil {
+            SelectionBar(model: model)
+            Divider()
         }
     }
 
