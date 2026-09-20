@@ -7,6 +7,27 @@ enum TestPatterns {
         (0..<count).map { _ in .stitch(kind) }
     }
 
+    /// TC-8 螺旋編み「うさぎの胴体」（12段。立ち上がりも引き抜きもない）
+    ///
+    /// 6→12→18→24→30→30×4→24→18→12。`rows` で先頭から何段ぶん含めるかを指定できる（既定は12段すべて）
+    static func tc8(rows count: Int = 12) -> Pattern {
+        let rows: [Row] = [
+            Row(steps: stitches(.singleCrochet, 6)),
+            Row(steps: [.untilEnd([.increase(.singleCrochet)])]),
+            Row(steps: [.repeating([.stitch(.singleCrochet), .increase(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 2) + [.increase(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 3) + [.increase(.singleCrochet)], times: 6)]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 3) + [.decrease(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 2) + [.decrease(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating([.stitch(.singleCrochet), .decrease(.singleCrochet)], times: 6)]),
+        ]
+        return Pattern(method: .spiral, foundation: .magicRing, rows: Array(rows.prefix(count)))
+    }
+
     /// TC-1 わの作り目からの輪編み（細編み）
     ///
     /// | 段 | 手順 | 目数 |

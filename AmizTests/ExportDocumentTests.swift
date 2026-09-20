@@ -21,6 +21,16 @@ struct ExportDocumentTests {
         #expect(decreasing.legendItems.contains(.decrease(.singleCrochet)))
     }
 
+    @Test("螺旋編み（うさぎの胴体）：凡例に立ち上がり・引き抜きは出ず、目数表は12段で警告なし")
+    func spiralRabbitBody() {
+        let document = ExportDocument(title: "うさぎの胴体", pattern: SamplePatterns.rabbitBody, options: ExportOptions())
+        #expect(document.legendItems == [.stitch(.singleCrochet), .increase(.singleCrochet), .decrease(.singleCrochet)])
+        #expect(document.warnings.isEmpty)
+        #expect(document.tableRows.map(\.rowNumberText).last == "12段目")
+        #expect(document.tableRows.contains { $0.rowNumberText == "6〜9段目" })
+        #expect(document.pages.map(\.id) == ["cover", "table.0"])
+    }
+
     @Test("ページ：くまの頭は表紙＋目数表1ページ。60段なら目数表が複数ページ。含める内容で変わる")
     func pages() {
         let bear = ExportDocument(title: "くまの頭", pattern: SamplePatterns.bearHead, options: ExportOptions())
