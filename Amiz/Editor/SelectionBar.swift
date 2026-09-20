@@ -12,7 +12,7 @@ struct SelectionBar: View {
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .accessibilityIdentifier("selection.description")
-                Text(model.selectedTurningChainCount == nil ? "目ボタンを押すと種類を変えられます" : "鎖の目数を変えられます")
+                Text(model.selectedTurningChainCount == nil ? "目ボタンを押すと種類を変えられます" : "鎖の目数と数え方を変えられます")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -26,6 +26,15 @@ struct SelectionBar: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("selection.turningChain")
+            }
+            // 立ち上がりを1目と数えるか（domain-spec 6）
+            if let counted = model.selectedTurningChainCounted {
+                Menu(counted ? "1目と数える" : "数えない") {
+                    Button("1目と数える") { model.request(.setTurningChainCounted(true)) }
+                    Button("数えない") { model.request(.setTurningChainCounted(false)) }
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("selection.turningChainCounted")
             }
             if model.selectionIsInRepeat {
                 Button("繰り返しを解除") { model.request(.unwrapRepeat) }

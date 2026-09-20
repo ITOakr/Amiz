@@ -19,6 +19,10 @@ final class EditorModel {
     private(set) var repeatStartIndex: Int?
     /// 立ち上がりの鎖の自動入力（ui-spec 6-3 の設定。画面側が UserDefaults の値を入れる）
     var autoTurningChain = true
+    /// 立ち上がりを1目と数えるか（ui-spec 6-3 の設定。画面側が UserDefaults の値を入れる）
+    var turningChainCounting = TurningChainCounting.standard
+    /// 「毎回選択」で、立ち上がりを数えるかを聞いている最中（ui-spec 7-4）。答えが来るまで目は入れない
+    private(set) var pendingTurningChainQuestion: TurningChainQuestion?
     /// 選択中の目（状態 S6。ui-spec U15）
     private(set) var selection: StitchRef?
     /// 確認待ちの修正（ui-spec 7-1）。画面がこれを見てダイアログを出す
@@ -64,12 +68,30 @@ final class EditorModel {
         }
     }
 
+    /// 「立ち上がり鎖3目を1目と数えますか？」の確認待ち（ui-spec 7-4）。答えのあとに続ける操作を覚えておく
+    struct TurningChainQuestion {
+        enum Action {
+            /// 目ボタン（先に選ぶ状態を含む）。立ち上がりを入れてからこの目を入れる
+            case stitch(StitchKind, StitchModifier)
+            /// 立ち上がりボタン（U23）
+            case turningChain
+        }
+
+        let chains: Int
+        let action: Action
+
+        var message: String {
+            "立ち上がり鎖\(chains)目を1目と数えますか？"
+        }
+    }
+
     /// 選択した目に対する編集（ui-spec U15）
     enum SelectionEdit {
         case changeKind(StitchKind)
         case delete
         case unwrapRepeat
         case setTurningChain(Int)
+        case setTurningChainCounted(Bool)
     }
 
     private var undoStack: [Pattern] = []
@@ -194,20 +216,33 @@ final class EditorModel {
 
     // MARK: - 目ボタン・先に選ぶボタン
 
-    /// 目ボタン。選択中なら選択した目の種類を変える（U15）。そうでなければ先に選ぶ状態を適用して1操作追加し、状態を解除する
+    /// 目ボタン。選択中なら選択した目の種類を変える（U15）。そうでなければ先に選ぶ状態を適用して1操作追加し、状態を解除する。
+    /// 立ち上がりが自動で入る目で、設定が「毎回選択」なら、数えるかを聞いてから入れる（7-4）
     func pressStitch(_ kind: StitchKind) {
         if selection != nil {
             modifier = .none
             request(.changeKind(kind))
             return
         }
+        var turningChainCounted: Bool?
+        if let chains = turningChainToInsert(for: kind) {
+            guard let counted = turningChainCounting.resolve(chains: chains) else {
+                pendingTurningChainQuestion = TurningChainQuestion(chains: chains, action: .stitch(kind, modifier))
+                return
+            }
+            turningChainCounted = counted
+        }
+        insertStitch(kind, modifier: modifier, turningChainCounted: turningChainCounted)
+    }
+
+    /// 目を入れる（先に選ぶ状態は解除する）。`turningChainCounted` は自動で入る立ち上がりを数えるか
+    private func insertStitch(_ kind: StitchKind, modifier: StitchModifier, turningChainCounted: Bool?) {
+        self.modifier = .none
         if editingSession != nil {
-            let modifier = self.modifier
-            self.modifier = .none
             editRow { session, method in
                 let result = PatternInput.insertStitch(
                     kind, modifier: modifier, at: session.cursor, in: &session.row,
-                    method: method, autoTurningChain: autoTurningChain
+                    method: method, autoTurningChain: autoTurningChain, turningChainCounted: turningChainCounted
                 )
                 session.cursor = result.stepIndex + 1
                 if result.insertedTurningChain, let start = session.repeatStartIndex {
@@ -216,15 +251,40 @@ final class EditorModel {
             }
             return
         }
-        let modifier = self.modifier
-        self.modifier = .none
         mutate { pattern in
-            let inserted = PatternInput.addStitch(kind, modifier: modifier, autoTurningChain: autoTurningChain, to: &pattern)
+            let inserted = PatternInput.addStitch(
+                kind, modifier: modifier, autoTurningChain: autoTurningChain, turningChainCounted: turningChainCounted, to: &pattern
+            )
             // 立ち上がりが先頭に入ると、繰り返し開始の位置が1つ後ろにずれる
             if inserted, let start = repeatStartIndex {
                 repeatStartIndex = start + 1
             }
         }
+    }
+
+    /// この目を押すと立ち上がりが自動で入るなら、その鎖の目数
+    private func turningChainToInsert(for kind: StitchKind) -> Int? {
+        if let session = editingSession {
+            return PatternInput.turningChainToInsert(for: kind, in: session.row, method: pattern.method, autoTurningChain: autoTurningChain)
+        }
+        return PatternInput.turningChainToInsert(for: kind, autoTurningChain: autoTurningChain, in: pattern)
+    }
+
+    /// 7-4 の答え：数える（true）／数えない（false）。聞いたときの操作を続ける
+    func answerTurningChainQuestion(counted: Bool) {
+        guard let question = pendingTurningChainQuestion else { return }
+        pendingTurningChainQuestion = nil
+        switch question.action {
+        case .stitch(let kind, let modifier):
+            insertStitch(kind, modifier: modifier, turningChainCounted: counted)
+        case .turningChain:
+            setTurningChain(chains: question.chains, counted: counted)
+        }
+    }
+
+    /// 7-4 をキャンセル。目は入れない（先に選ぶ状態はそのまま）
+    func cancelTurningChainQuestion() {
+        pendingTurningChainQuestion = nil
     }
 
     func toggleIncrease() { modifier.toggleIncrease() }
@@ -346,10 +406,18 @@ final class EditorModel {
         editingSession?.repeatStartIndex = nil
     }
 
-    /// 「立ち上がり」ボタン
+    /// 「立ち上がり」ボタン（U23）。設定が「毎回選択」なら数えるかを聞いてから入れる（7-4）
     func pressTurningChain(chains: Int) {
+        guard let counted = turningChainCounting.resolve(chains: chains) else {
+            pendingTurningChainQuestion = TurningChainQuestion(chains: chains, action: .turningChain)
+            return
+        }
+        setTurningChain(chains: chains, counted: counted)
+    }
+
+    private func setTurningChain(chains: Int, counted: Bool) {
         mutate { pattern in
-            let inserted = PatternInput.setTurningChain(chains: chains, in: &pattern)
+            let inserted = PatternInput.setTurningChain(chains: chains, counted: counted, in: &pattern)
             if inserted, let start = repeatStartIndex {
                 repeatStartIndex = start + 1
             }
@@ -477,6 +545,11 @@ final class EditorModel {
         if case .turningChain(let chains, _) = selectedStep?.kind { chains } else { nil }
     }
 
+    /// 選択中の目が立ち上がりなら、1目と数えるか
+    var selectedTurningChainCounted: Bool? {
+        if case .turningChain(_, let counted) = selectedStep?.kind { counted } else { nil }
+    }
+
     /// 選択中の目の表記と段番号（「細編み（3段目）」）
     var selectionDescription: String? {
         guard let location = selectedLocation, let step = selectedStep else { return nil }
@@ -498,13 +571,20 @@ final class EditorModel {
         case .unwrapRepeat:
             applied = PatternInput.unwrapRepeat(containing: ref, in: &edited)
         case .setTurningChain(let chains):
-            applied = PatternInput.setTurningChain(chains: chains, rowID: ref.rowID, in: &edited)
+            // 数えるかは設定に従う。「毎回選択」のときは今の値のまま（隣のメニューで切り替えられる）
+            let counted = turningChainCounting.resolve(chains: chains) ?? selectedTurningChainCounted
+            applied = PatternInput.setTurningChain(chains: chains, counted: counted, rowID: ref.rowID, in: &edited)
+        case .setTurningChainCounted(let counted):
+            applied = PatternInput.setTurningChainCounted(counted, rowID: ref.rowID, in: &edited)
         }
         guard applied else { return }
 
         let editedRow = edited.rows[location.rowIndex]
         let impact = PatternEditor.impact(of: .replace(rowIndex: location.rowIndex, with: editedRow), on: pattern)
-        let keepsSelection: Bool = if case .changeKind = edit { true } else if case .setTurningChain = edit { true } else { false }
+        let keepsSelection: Bool = switch edit {
+        case .changeKind, .setTurningChain, .setTurningChainCounted: true
+        case .delete, .unwrapRepeat: false
+        }
 
         if impact.needsConfirmation {
             pendingConfirmation = PendingConfirmation(impact: impact, edit: .replace(rowIndex: location.rowIndex, with: editedRow))
