@@ -114,7 +114,7 @@ struct ExportDocument {
         self.title = title
         self.pattern = pattern
         self.expansion = pattern.expanded()
-        self.layout = pattern.circularLayout(expansion: expansion)
+        self.layout = pattern.chartLayout(expansion: expansion)
         self.options = options
     }
 

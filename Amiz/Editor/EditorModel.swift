@@ -101,7 +101,7 @@ final class EditorModel {
         self.pattern = pattern
         let expansion = pattern.expanded()
         self.expansion = expansion
-        self.layout = pattern.circularLayout(expansion: expansion)
+        self.layout = pattern.chartLayout(expansion: expansion)
     }
 
     /// 画面に出す編み図。過去の段を編集中は、その段を作業用のコピーに差し替えたもの
@@ -192,8 +192,8 @@ final class EditorModel {
     /// 次に拾う前段の目（図のハイライト。ui-spec 5-3）。前段がない・使い切った・段がないときは nil
     var nextStitchToPick: LaidOutStitch? {
         guard let index = currentRowIndex, index > 0, let row = currentRow,
-              let unpicked = row.unpickedCount, unpicked > 0 else { return nil }
-        return layout.countedStitch(rowIndex: index - 1, countedIndex: row.pickedCount)
+              let next = row.nextPickIndex else { return nil }
+        return layout.countedStitch(rowIndex: index - 1, countedIndex: next)
     }
 
     /// 「繰り返し終了」で「段の終わりまで」を選べるか
@@ -656,6 +656,6 @@ final class EditorModel {
     private func recompute() {
         let shown = displayedPattern
         expansion = shown.expanded()
-        layout = shown.circularLayout(expansion: expansion)
+        layout = shown.chartLayout(expansion: expansion)
     }
 }

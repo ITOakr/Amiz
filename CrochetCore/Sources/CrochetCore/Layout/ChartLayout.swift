@@ -106,7 +106,7 @@ public struct ChartLayout: Hashable, Sendable {
     public var bands: [RowBand]
     /// 作り目の鎖の位置（平面図。鎖の作り目の n 目を編んだ順に）
     public var foundationChain: [CGPoint]
-    /// 図の中心
+    /// 図の中心（円形図は輪の中心、平面図は外接矩形の中心。画面に収めるときの基準）
     public var center: CGPoint
     /// 図全体を含む矩形（記号の余白込み）
     public var bounds: CGRect
