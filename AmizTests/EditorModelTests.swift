@@ -310,4 +310,49 @@ struct EditorModelTests {
         #expect(model.editingSession == nil)
         #expect(model.expansion.rows[1].totalCount == 12)
     }
+
+    @Test("段の複製：最後の段を4回複製すると確認なしで増え、目数表で「5〜9段目（増減なし）」にまとまる")
+    func duplicateLastFinishedRow() {
+        var pattern = SamplePatterns.bearHead
+        pattern.rows[4] = Row(steps: [.turningChain(1), .untilEnd([.stitch(.singleCrochet)]), .closeRound()])
+        pattern.rows.append(Row())  // 入力中の空の6段目
+        let model = EditorModel(pattern: pattern)
+
+        model.requestDuplicateRow(at: 4, times: 4)
+        #expect(model.pendingConfirmation == nil)  // 上にあるのは空の段だけ
+        #expect(model.pattern.rows.count == 10)
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 12, 18, 24, 24, 24, 24, 24, 24, 0])
+        #expect(model.finishedTableRows.map(\.rowNumberText) == ["1段目", "2段目", "3段目", "4段目", "5〜9段目"])
+        #expect(model.finishedTableRows.last?.isUnchangedRun == true)
+        #expect(model.canUndo)
+    }
+
+    @Test("段の削除：途中の段は確認が出て、残すと上の段に警告、ほどくと上の段が消えて空の段が足される")
+    func deleteMiddleRow() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+
+        model.requestDeleteRow(at: 1)
+        #expect(model.pendingConfirmation?.message == "2段目を削除します。3〜5段目に影響があります。")
+
+        model.resolveConfirmation(keepingRowsAbove: true)
+        #expect(model.pattern.rows.count == 4)
+        // 旧3段目（(細編み, 増し目)×6）が前段6目の上に来て拾いすぎの警告
+        #expect(model.warnings.first?.rowNumber == 2)
+        #expect(model.warnings.first?.kind == .excess(previousCount: 6, pickedCount: 12))
+
+        model.undo()
+        model.requestDeleteRow(at: 1)
+        model.resolveConfirmation(keepingRowsAbove: false)
+        #expect(model.expansion.rows.map(\.totalCount) == [6, 0])
+        #expect(model.currentRowIndex == 1)
+    }
+
+    @Test("段の複製：途中の段は確認が出る")
+    func duplicateMiddleRowNeedsConfirmation() {
+        let model = EditorModel(pattern: SamplePatterns.bearHead)
+        model.requestDuplicateRow(at: 1, times: 2)
+        #expect(model.pendingConfirmation?.message == "2段目を2回複製します。3〜5段目に影響があります。")
+        model.cancelConfirmation()
+        #expect(model.pattern.rows.count == 5)
+    }
 }
