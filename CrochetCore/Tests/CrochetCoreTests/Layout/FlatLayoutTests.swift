@@ -10,12 +10,12 @@ struct FlatLayoutTests {
         layout.stitches.filter { $0.rowIndex == row && $0.countedIndex != nil }
     }
 
-    @Test("作り目の鎖は y = 0 に x = 0…19 で並び、1段目の目はその真上に右から左へ並ぶ")
+    @Test("作り目の鎖は x = 0…19 で横一列に並び、1段目の目はその真上に右から左へ並ぶ")
     func foundationAndFirstRow() {
         let layout = TestPatterns.tc9(rows: 1).flatLayout()
         #expect(layout.foundationChain.count == 20)
-        #expect(layout.foundationChain.first == CGPoint(x: 0, y: 0))
-        #expect(layout.foundationChain.last == CGPoint(x: 19, y: 0))
+        #expect(layout.foundationChain.map(\.x) == (0..<20).map { CGFloat($0) })
+        #expect(layout.foundationChain.allSatisfy { $0.y > 0 && $0.y < 1 })  // 1段目の根元（y = 0）の少し下
         #expect(layout.rings.isEmpty && layout.bands.count == 1)
 
         let row1 = heads(layout, row: 0)
@@ -27,10 +27,10 @@ struct FlatLayoutTests {
         #expect(layout.bands[0].direction == -1)
         #expect(abs(layout.bands[0].seamX - 19.5) < 0.001)
 
-        // 数えない立ち上がりは右端（始まりの端）に立つ
+        // 数えない立ち上がりは右端（始まりの端の少し外）に立つ
         let turningChain = layout.stitches.first { $0.rowIndex == 0 && $0.countedIndex == nil }!
         #expect(turningChain.role == .turningChain(chains: 1))
-        #expect(abs(turningChain.head.x - 19.5) < 0.001)
+        #expect(abs(turningChain.head.x - 19.8) < 0.001)
         #expect(turningChain.head.y < 0 && turningChain.bases[0].y == 0)
     }
 

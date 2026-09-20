@@ -55,6 +55,10 @@ struct AmizApp: App {
                     for suffix in ["", "-shm", "-wal"] {
                         try? FileManager.default.removeItem(at: URL(filePath: url.path + suffix))
                     }
+                    // 設定（UserDefaults）も既定に戻す。前のテストで変えた設定が残らないように
+                    if let bundleID = Bundle.main.bundleIdentifier {
+                        UserDefaults.standard.removePersistentDomain(forName: bundleID)
+                    }
                 }
                 return try ModelContainer(for: Work.self, configurations: ModelConfiguration(url: url))
             }

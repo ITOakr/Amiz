@@ -19,8 +19,12 @@ public enum FlatLayout {
         public var lowStitchHeight = 0.5
         /// 数えない立ち上がり（鎖1目）を描く長さ
         public var uncountedTurningChainHeight = 0.6
+        /// 数えない立ち上がりを段の始まりの端からどれだけ外に出すか
+        public var uncountedTurningChainOutset = 0.3
+        /// 作り目の鎖を1段目の根元からどれだけ下に描くか（1段目の記号と重ならないように）
+        public var foundationChainOffset = 0.45
         /// 外接矩形の余白（段番号と矢印のぶんも含む）
-        public var margin = 2.0
+        public var margin = 2.6
 
         public init() {}
     }
@@ -30,7 +34,8 @@ public enum FlatLayout {
         var stitches: [LaidOutStitch] = []
         var bands: [RowBand] = []
 
-        // 作り目の鎖：x = 0, 1, 2, … に横一列（最初に編んだ鎖が左。1段目は右端から拾い始める）
+        // 作り目の鎖：x = 0, 1, 2, … に横一列（最初に編んだ鎖が左。1段目は右端から拾い始める）。
+        // 1段目の根元は y = 0 で、鎖はその少し下に描く
         var foundationChain: [CGPoint] = []
         /// 前段の「数える目」の頭の x（編んだ順）
         var previousXs: [Double] = []
@@ -38,7 +43,7 @@ public enum FlatLayout {
         var previousEndX = 0.0
         if case .chain(let stitchCount) = pattern.foundation {
             for index in 0..<stitchCount {
-                foundationChain.append(CGPoint(x: CGFloat(index), y: 0))
+                foundationChain.append(CGPoint(x: CGFloat(index), y: options.foundationChainOffset))
                 previousXs.append(Double(index))
             }
             previousEndX = previousXs.last ?? 0
@@ -83,12 +88,13 @@ public enum FlatLayout {
                         sharedBaseCount: groupSizes[countedIndex], direction: direction, options: options
                     )
                 } else {
-                    // 数えない目：立ち上がり（鎖1目）は始まりの端に立てる。引き抜きは往復編みでは入らないが、念のため段の終わりに置く
+                    // 数えない目：立ち上がり（鎖1目）は始まりの端の少し外に立てる（隣の目の脚と触れないように）。
+                    // 引き抜きは往復編みでは入らないが、念のため段の終わりに置く
                     let x: Double
                     let height: Double
                     switch stitch.role {
                     case .turningChain(let chains):
-                        x = seamX
+                        x = seamX - direction * options.uncountedTurningChainOutset
                         height = chains == 1 ? options.uncountedTurningChainHeight : min(Double(chains), rowHeight)
                     case .closingSlipStitch, .regular:
                         x = (headXs.last ?? previousEndX) + direction * 0.5
@@ -120,7 +126,11 @@ public enum FlatLayout {
             x: minX - options.margin, y: baseY - options.margin,
             width: (maxX - minX) + options.margin * 2, height: -baseY + options.margin * 2
         )
-        return ChartLayout(stitches: stitches, bands: bands, foundationChain: foundationChain, center: .zero, bounds: bounds)
+        // 図の中心は外接矩形の中心（画面に収めるときの基準）
+        return ChartLayout(
+            stitches: stitches, bands: bands, foundationChain: foundationChain,
+            center: CGPoint(x: bounds.midX, y: bounds.midY), bounds: bounds
+        )
     }
 
     // MARK: - 頭の x

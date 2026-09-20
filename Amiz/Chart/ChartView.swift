@@ -157,11 +157,31 @@ struct ChartPainter {
     func draw(in context: inout GraphicsContext) {
         let style = StitchSymbol.Style(unit: transform.unit, lineWidth: max(1, min(2, transform.unit * 0.11)))
 
-        // 段の輪の補助線
+        // 段の輪の補助線（円形図）
         for ring in layout.rings {
             let radius = ring.outerRadius * transform.unit
             let rect = CGRect(x: transform.origin.x - radius, y: transform.origin.y - radius, width: radius * 2, height: radius * 2)
             context.stroke(Path(ellipseIn: rect), with: .color(.secondary.opacity(0.15)), lineWidth: 0.5)
+        }
+
+        // 段の帯の補助線（平面図）：段の頭側に横線
+        if let first = layout.bands.first {
+            let minX = layout.bounds.minX + 1
+            let maxX = layout.bounds.maxX - 1
+            for band in layout.bands + [RowBand(rowIndex: -1, baseY: first.baseY, topY: first.baseY, direction: 0, seamX: 0)] {
+                var line = Path()
+                line.move(to: transform.toScreen(CGPoint(x: minX, y: band.topY)))
+                line.addLine(to: transform.toScreen(CGPoint(x: maxX, y: band.topY)))
+                context.stroke(line, with: .color(.secondary.opacity(0.15)), lineWidth: 0.5)
+            }
+        }
+
+        // 作り目の鎖（平面図）：横たわる鎖の楕円
+        for point in layout.foundationChain {
+            let head = transform.toScreen(point)
+            let root = CGPoint(x: head.x - transform.unit, y: head.y)
+            let path = StitchSymbol.strokePath(kind: .chain, from: root, to: head, style: style)
+            context.stroke(path, with: .color(.primary), lineWidth: style.lineWidth)
         }
 
         // 段の境目の区切り線（螺旋編み）：継ぎ目の角度に、段の内側から外側まで
@@ -189,7 +209,30 @@ struct ChartPainter {
             }
         }
 
-        // 段番号：段の始まりの空き（立ち上がりの楕円と引き抜きの点の間の高さ）に置く
+        // 段番号と方向の矢印（平面図）：立ち上がり側の外に置く（domain-spec 9）
+        if showsRowNumbers {
+            for band in layout.bands {
+                let outward = -band.direction  // 段の始まりの端から外へ向かう向き
+                let y = (band.baseY + band.topY) / 2
+                let numberPoint = transform.toScreen(CGPoint(x: band.seamX + outward * 1.9, y: y))
+                let text = Text("\(band.rowIndex + 1)").font(.system(size: max(7, transform.unit * 0.36), weight: .semibold)).foregroundStyle(.secondary)
+                context.draw(context.resolve(text), at: numberPoint)
+
+                // 矢印：段番号と始まりの端の間で、進む方向を指す
+                let tail = transform.toScreen(CGPoint(x: band.seamX + outward * 1.5, y: y))
+                let tip = transform.toScreen(CGPoint(x: band.seamX + outward * 0.8, y: y))
+                var arrow = Path()
+                arrow.move(to: tail)
+                arrow.addLine(to: tip)
+                let headSize = transform.unit * 0.18
+                arrow.move(to: CGPoint(x: tip.x - band.direction * headSize, y: tip.y - headSize))
+                arrow.addLine(to: tip)
+                arrow.addLine(to: CGPoint(x: tip.x - band.direction * headSize, y: tip.y + headSize))
+                context.stroke(arrow, with: .color(.secondary), lineWidth: max(0.8, style.lineWidth * 0.7))
+            }
+        }
+
+        // 段番号（円形図）：段の始まりの空き（立ち上がりの楕円と引き抜きの点の間の高さ）に置く
         if showsRowNumbers {
             for ring in layout.rings {
                 let angle = ring.seamAngle
@@ -208,6 +251,12 @@ struct ChartPainter {
 
 #Preview {
     let pattern = SamplePatterns.bearHead
-    return ChartView(layout: pattern.circularLayout(), currentRowIndex: 4)
+    return ChartView(layout: pattern.chartLayout(), currentRowIndex: 4)
+        .frame(height: 400)
+}
+
+#Preview("往復編み") {
+    let pattern = SamplePatterns.blanketEdge
+    return ChartView(layout: pattern.chartLayout(), currentRowIndex: 6)
         .frame(height: 400)
 }
