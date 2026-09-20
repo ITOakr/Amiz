@@ -174,4 +174,29 @@ final class EditorSmokeUITests: XCTestCase {
         singleCrochet.tap()
         XCTAssertTrue(app.staticTexts["2段目・この段 4目"].waitForExistence(timeout: 2))
     }
+
+    /// 目の選択（U15）：現在の段の項目をタップして種類を変え、削除する
+    @MainActor
+    func testSelectStitchAndChangeKind() {
+        let app = launchFresh()
+        createWork(in: app)
+        let singleCrochet = app.buttons["stitch.singleCrochet"]
+        XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
+        for _ in 0..<3 { singleCrochet.tap() }
+
+        // 直前の項目（細編み）をタップ → 選択バーが出る
+        app.buttons["細編み"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["selection.description"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.staticTexts["selection.description"].label, "細編み（1段目）")
+
+        // 目ボタンで種類の変更（目数は増えない）
+        app.buttons["stitch.doubleCrochet"].tap()
+        XCTAssertEqual(app.staticTexts["selection.description"].label, "長編み（1段目）")
+        XCTAssertTrue(app.staticTexts["1段目・この段 3目"].exists)
+
+        // 削除 → 2目、選択は解除
+        app.buttons["selection.delete"].tap()
+        XCTAssertTrue(app.staticTexts["1段目・この段 2目"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["selection.description"].exists)
+    }
 }

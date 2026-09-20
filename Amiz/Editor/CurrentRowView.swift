@@ -61,22 +61,30 @@ struct CurrentRowView: View {
         return "\(index + 1)段目・この段 \(row.totalCount)目"
     }
 
-    /// 直前に編んだ3項目（ui-spec 5-5）
+    /// 直前に編んだ3項目（ui-spec 5-5）。タップで選択（U15）
     private var recentSteps: some View {
         HStack(spacing: 6) {
-            let labels = model.recentStepLabels(count: 3)
-            if labels.isEmpty {
+            let steps = model.recentSteps(count: 3)
+            if steps.isEmpty {
                 Text("まだ目がありません")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
-                    Text(label)
-                        .font(.caption)
-                        .lineLimit(1)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+                ForEach(steps) { step in
+                    let ref = model.currentRowIndex.map { StitchRef(rowID: model.pattern.rows[$0].id, stepID: step.id) }
+                    let isSelected = ref != nil && model.selection == ref
+                    Button {
+                        model.select(ref)
+                    } label: {
+                        Text(StitchTableFormatter.label(for: step))
+                            .font(.caption)
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(isSelected ? Color.orange.opacity(0.25) : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.orange : .clear, lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
                 }
                 // 入力位置
                 Rectangle()
