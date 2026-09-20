@@ -21,6 +21,10 @@ struct EditorView: View {
     @AppStorage(AppSettings.showsRowNumbersKey) private var showsRowNumbers = true
     /// 図／目数表の切り替え
     @State private var tab: Tab = .chart
+    /// 書き出しシート（ui-spec 6-2）
+    @State private var showsExportSheet = false
+    /// 書き出し前の確認の文（ui-spec 7-3）。nil なら確認を出していない
+    @State private var exportConfirmationMessage: String?
 
     private enum Tab: String, CaseIterable {
         case chart = "図"
@@ -58,6 +62,16 @@ struct EditorView: View {
         } message: {
             Text(model.pendingConfirmation?.message ?? "")
         }
+        // 書き出し前の確認（7-3）。「書き出す」で書き出しシートへ進む
+        .alert("書き出し前の確認", isPresented: isExportConfirmationPresented) {
+            Button("書き出す") { showsExportSheet = true }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text(exportConfirmationMessage ?? "")
+        }
+        .sheet(isPresented: $showsExportSheet) {
+            ExportSheet(title: title, pattern: model.pattern)
+        }
         .onChange(of: autoTurningChain, initial: true) { _, isOn in
             model.autoTurningChain = isOn
         }
@@ -68,6 +82,20 @@ struct EditorView: View {
             // 画面を閉じるときは待たずに保存する
             saveTask?.cancel()
             onPatternChange?(model.pattern)
+        }
+    }
+
+    private var isExportConfirmationPresented: Binding<Bool> {
+        Binding(get: { exportConfirmationMessage != nil }, set: { if !$0 { exportConfirmationMessage = nil } })
+    }
+
+    /// 書き出しへ進む。目数が合わない段があれば先に確認を出す（ui-spec 7-3）
+    private func requestExport() {
+        let document = ExportDocument(title: title, pattern: model.pattern, options: ExportOptions())
+        if let message = document.confirmationMessage {
+            exportConfirmationMessage = message
+        } else {
+            showsExportSheet = true
         }
     }
 
@@ -171,11 +199,11 @@ struct EditorView: View {
                 .disabled(!model.canRedo)
                 .accessibilityIdentifier("op.redo")
             Menu("その他", systemImage: "ellipsis.circle") {
-                // 色の編集はフェーズ9、書き出しはフェーズ5で有効にする
+                // 色の編集はフェーズ9で有効にする
                 Button("色を編集", systemImage: "paintpalette") {}
                     .disabled(true)
-                Button("書き出し", systemImage: "square.and.arrow.up") {}
-                    .disabled(true)
+                Button("書き出し", systemImage: "square.and.arrow.up") { requestExport() }
+                    .accessibilityIdentifier("menu.export")
             }
             .accessibilityIdentifier("toolbar.more")
         }
