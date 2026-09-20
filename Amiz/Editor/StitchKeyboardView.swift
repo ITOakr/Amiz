@@ -156,6 +156,7 @@ struct StitchKeyboardView: View {
             OperationButton(title: "段を終える") {
                 finishRow()
             }
+            .disabled(model.editingSession != nil)
             .accessibilityIdentifier("op.finishRow")
 
             OperationButton(title: "1目削除") {

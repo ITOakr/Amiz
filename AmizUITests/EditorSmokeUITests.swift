@@ -199,4 +199,65 @@ final class EditorSmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["1段目・この段 2目"].waitForExistence(timeout: 2))
         XCTAssertFalse(app.staticTexts["selection.description"].exists)
     }
+
+    /// 過去の段の編集（U16）と修正の確認（7-1）：TC-2 のシナリオ
+    @MainActor
+    func testEditPastRowWithConfirmation() {
+        let app = launchFresh()
+        createWork(in: app)
+        let singleCrochet = app.buttons["stitch.singleCrochet"]
+        XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
+
+        // 1段目：細編み6目、2段目：残りすべてに増し目、3段目：（細編み、増し目）×6
+        for _ in 0..<6 { singleCrochet.tap() }
+        app.buttons["op.finishRow"].tap()
+        app.buttons["modifier.untilEnd"].tap()
+        app.buttons["modifier.increase"].tap()
+        singleCrochet.tap()
+        app.buttons["op.finishRow"].tap()
+        app.buttons["op.beginRepeat"].tap()
+        singleCrochet.tap()
+        app.buttons["modifier.increase"].tap()
+        singleCrochet.tap()
+        app.buttons["op.endRepeat"].tap()
+        let repeatSix = app.alerts.buttons["×6で繰り返す"]
+        XCTAssertTrue(repeatSix.waitForExistence(timeout: 2))
+        repeatSix.tap()
+        app.buttons["op.finishRow"].tap()
+
+        // 目数表で1段目をタップ → 編集中 → 細編みを1目足して完了 → 確認
+        // （表は末尾へ自動スクロールするので、上へ戻してから1段目を探す）
+        app.buttons["目数表"].tap()
+        let table = app.collectionViews.firstMatch
+        XCTAssertTrue(table.waitForExistence(timeout: 2))
+        table.swipeDown()
+        let row1 = app.buttons["table.row.1"]
+        XCTAssertTrue(row1.waitForExistence(timeout: 2))
+        row1.tap()
+        XCTAssertTrue(app.staticTexts["1段目を編集中・この段 6目"].waitForExistence(timeout: 2))
+        singleCrochet.tap()
+        XCTAssertTrue(app.staticTexts["1段目を編集中・この段 7目"].exists)
+        app.buttons["editing.done"].tap()
+
+        let alert = app.alerts["修正の確認"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        XCTAssertTrue(alert.staticTexts["1段目の目数が6目から7目に変わりました。2〜3段目に影響があります。"].exists)
+        alert.buttons["上の段を残す"].tap()
+
+        // 2段目は自動追従して14目、3段目は18目のままで警告
+        XCTAssertTrue(app.staticTexts["わの作り目に細編み7目"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["14目"].exists)
+        XCTAssertTrue(app.staticTexts["前段14目のうち12目しか拾っていません"].exists)
+
+        // もう一度編集して、今度は「上の段をほどく」
+        table.swipeDown()
+        XCTAssertTrue(row1.waitForExistence(timeout: 2))
+        row1.tap()
+        app.buttons["op.deleteLast"].tap()
+        app.buttons["editing.done"].tap()
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        alert.buttons["上の段をほどく"].tap()
+        XCTAssertTrue(app.staticTexts["2段目・この段 0目"].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["14目"].exists)
+    }
 }

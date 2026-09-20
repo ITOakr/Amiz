@@ -16,25 +16,13 @@ public enum PatternInput {
         to pattern: inout Pattern
     ) -> Bool {
         let index = ensureCurrentRow(in: &pattern)
-        var step = modifier.step(for: kind)
-
-        // 「残りすべてに」は、単位が前段を1目も拾わない（鎖編みなど）なら付けられない（domain-spec 17）
-        if case .repeatGroup(let unit, .untilEnd) = step.kind, !canRepeatUntilEnd(unit: unit) {
-            step = unit[0]
-        }
-
-        var insertedTurningChain = false
-        if autoTurningChain,
-           pattern.method.usesTurningChain,
-           kind != .chain,
-           !hasNonChainStitch(pattern.rows[index]),
-           let chains = kind.defaultTurningChains {
-            pattern.rows[index].steps.insert(.turningChain(chains), at: 0)
-            insertedTurningChain = true
-        }
-
-        pattern.rows[index].steps.append(step)
-        return insertedTurningChain
+        var row = pattern.rows[index]
+        let result = insertStitch(
+            kind, modifier: modifier, at: row.steps.count, in: &row,
+            method: pattern.method, autoTurningChain: autoTurningChain
+        )
+        pattern.rows[index] = row
+        return result.insertedTurningChain
     }
 
     /// 「飛ばす」。前段の目が残っていなければ何もしない（ui-spec 5-5）
@@ -52,7 +40,7 @@ public enum PatternInput {
     /// 「残りは編まない」（domain-spec 23）
     public static func addLeaveRemaining(to pattern: inout Pattern) {
         let index = ensureCurrentRow(in: &pattern)
-        pattern.rows[index].steps.append(.leaveRemaining())
+        insertLeaveRemaining(at: pattern.rows[index].steps.count, in: &pattern.rows[index])
     }
 
     /// 「1目削除」：直前の1操作を消す。繰り返しなら丸ごと消す（ui-spec 5-6）。
@@ -92,22 +80,7 @@ public enum PatternInput {
     @discardableResult
     public static func wrapRepeat(from startIndex: Int, count: RepeatCount, in pattern: inout Pattern) -> Bool {
         guard let index = pattern.currentRowIndex else { return false }
-        var start = max(0, startIndex)
-        let steps = pattern.rows[index].steps
-
-        if start == 0, case .turningChain = steps.first?.kind {
-            start = 1
-        }
-        guard start < steps.count else { return false }
-
-        let unit = Array(steps[start...])
-        guard unit.allSatisfy(canBeInRepeatUnit) else { return false }
-        if case .untilEnd = count, !canRepeatUntilEnd(unit: unit) {
-            return false
-        }
-
-        pattern.rows[index].steps.replaceSubrange(start..., with: [Step(kind: .repeatGroup(unit: unit, count: count))])
-        return true
+        return wrapRepeat(max(0, startIndex)..<pattern.rows[index].steps.count, count: count, in: &pattern.rows[index])
     }
 
     /// 「立ち上がり」ボタン：段の先頭に立ち上がりを入れる。すでにあれば鎖の目数を変える（ui-spec 5-6 U23）。
@@ -127,6 +100,16 @@ public enum PatternInput {
         return true
     }
 
+    /// 最後の段が閉じている（段を閉じる引き抜きで終わっている）なら、続きを入力するための空の段を足す。
+    /// 「上の段をほどく」や段の削除で、終わった段が最後になったときに使う
+    /// - Returns: 足したか
+    @discardableResult
+    public static func ensureOpenRow(in pattern: inout Pattern) -> Bool {
+        guard let last = pattern.rows.last, case .closeRound = last.steps.last?.kind else { return false }
+        pattern.rows.append(Row())
+        return true
+    }
+
     /// 「段の終わりまで」を選べる単位か（前段を1目以上拾う。domain-spec 17）
     public static func canRepeatUntilEnd(unit: [Step]) -> Bool {
         Expander.picksPerIteration(of: unit) > 0
@@ -143,33 +126,10 @@ public enum PatternInput {
         return pattern.rows.count - 1
     }
 
-    /// 段に鎖以外の目（または立ち上がり）がすでにあるか
-    private static func hasNonChainStitch(_ row: Row) -> Bool {
-        row.steps.contains { step in
-            switch step.kind {
-            case .turningChain:
-                true
-            case .stitch(let kind, _), .increase(let kind, _, _), .decrease(let kind, _):
-                kind != .chain
-            case .repeatGroup(let unit, _):
-                hasNonChainStitch(Row(steps: unit))
-            case .skip, .leaveRemaining, .closeRound:
-                false
-            }
-        }
-    }
-
     private static func endsWithCloseRound(_ row: Row) -> Bool {
         if case .closeRound = row.steps.last?.kind { true } else { false }
     }
 
-    /// 繰り返しの単位に入れられる操作か（立ち上がり・段を閉じる引き抜き・残りは編まない・入れ子は不可）
-    private static func canBeInRepeatUnit(_ step: Step) -> Bool {
-        switch step.kind {
-        case .stitch, .increase, .decrease, .skip: true
-        case .turningChain, .closeRound, .leaveRemaining, .repeatGroup: false
-        }
-    }
 }
 
 extension Pattern {

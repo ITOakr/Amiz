@@ -145,4 +145,36 @@ struct PatternEditorTests {
         ))
         #expect(PatternEditor.impact(of: edit, on: pattern).affectedRowsDescription == "2段目")
     }
+
+    @Test("影響範囲は目のある段まで。末尾の空の段（入力を始めていない段）は含めない")
+    func trailingEmptyRowIsNotAffected() {
+        var pattern = TestPatterns.tc1()
+        pattern.rows.append(Row())  // 入力中の空の6段目
+        let edit = RowEdit.replace(rowIndex: 0, with: Row(
+            steps: [.turningChain(1)] + TestPatterns.stitches(.singleCrochet, 7) + [.closeRound()]
+        ))
+        #expect(PatternEditor.impact(of: edit, on: pattern).affectedRowNumbers == 2...5)
+
+        // 空の段しか上にないなら影響なし
+        var single = Pattern(method: .joinedRounds, foundation: .magicRing, rows: [pattern.rows[0], Row()])
+        #expect(!PatternEditor.impact(of: edit, on: single).needsConfirmation)
+        single.rows[0] = edit_row(edit)
+        #expect(single.rows.count == 2)
+    }
+
+    private func edit_row(_ edit: RowEdit) -> Row {
+        if case .replace(_, let row) = edit { return row }
+        fatalError()
+    }
+
+    @Test("ほどいた後：最後の段が閉じていれば空の段を足す")
+    func ensureOpenRow() {
+        var pattern = PatternEditor.applyUnravelingRowsAbove(.delete(rowIndex: 2), to: TestPatterns.tc1())
+        #expect(pattern.rows.count == 2)
+        #expect(PatternInput.ensureOpenRow(in: &pattern))
+        #expect(pattern.rows.count == 3)
+        #expect(pattern.rows[2].steps.isEmpty)
+        // すでに空の段があれば足さない
+        #expect(!PatternInput.ensureOpenRow(in: &pattern))
+    }
 }

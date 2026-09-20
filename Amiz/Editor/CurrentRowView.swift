@@ -2,6 +2,7 @@ import SwiftUI
 import CrochetCore
 
 /// 現在の段（ui-spec 5-5 の C）。進み具合の数字を主役にし、直前に編んだ3項目を添える。
+/// 過去の段を編集中（U16）は、その段の手順をすべて並べ、項目の間をタップして入力位置を動かす。
 struct CurrentRowView: View {
     let model: EditorModel
 
@@ -13,20 +14,24 @@ struct CurrentRowView: View {
                 Text(rowSummary)
                     .font(.subheadline.weight(.semibold))
                     .accessibilityIdentifier("status.row")
-                if model.hasUsedUpPreviousRow {
+                if model.hasUsedUpPreviousRow, model.editingSession == nil {
                     // 前段を拾い切った。さらに編める（拾いすぎ）が、警告は段を終えたときに出す（domain-spec 23）
                     Text("前段を使い切りました")
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .accessibilityIdentifier("status.usedUp")
                 }
-                recentSteps
+                if let session = model.editingSession {
+                    editingSteps(session)
+                } else {
+                    recentSteps
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color(.systemBackground))
+        .background(model.editingSession == nil ? Color(.systemBackground) : Color.accentColor.opacity(0.08))
         // 縦は必要な高さだけ使い、余りは目数表に渡す
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -34,7 +39,7 @@ struct CurrentRowView: View {
     /// 「拾った目／前段の目数」を大きく。わの作り目の1段目は分母がないので「この段 ○目」だけ
     private var progress: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let row = model.currentRow, let previous = row.previousCount {
+            if let row = model.activeRow, let previous = row.previousCount {
                 Text("\(row.pickedCount)/\(previous)")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
@@ -42,7 +47,7 @@ struct CurrentRowView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
-                Text("\(model.currentRow?.totalCount ?? 0)")
+                Text("\(model.activeRow?.totalCount ?? 0)")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
                 Text("この段の目数")
@@ -53,10 +58,13 @@ struct CurrentRowView: View {
         .frame(minWidth: 88, alignment: .leading)
     }
 
-    /// 「4段目・この段 5目」
+    /// 「4段目・この段 5目」（編集中は「3段目を編集中・この段 18目」）
     private var rowSummary: String {
-        guard let index = model.currentRowIndex, let row = model.currentRow else {
+        guard let index = model.activeRowIndex, let row = model.activeRow else {
             return "1段目を編み始めてください"
+        }
+        if model.editingSession != nil {
+            return "\(index + 1)段目を編集中・この段 \(row.totalCount)目"
         }
         return "\(index + 1)段目・この段 \(row.totalCount)目"
     }
@@ -72,24 +80,11 @@ struct CurrentRowView: View {
             } else {
                 ForEach(steps) { step in
                     let ref = model.currentRowIndex.map { StitchRef(rowID: model.pattern.rows[$0].id, stepID: step.id) }
-                    let isSelected = ref != nil && model.selection == ref
-                    Button {
+                    StepChip(label: StitchTableFormatter.label(for: step), isSelected: ref != nil && model.selection == ref) {
                         model.select(ref)
-                    } label: {
-                        Text(StitchTableFormatter.label(for: step))
-                            .font(.caption)
-                            .lineLimit(1)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(isSelected ? Color.orange.opacity(0.25) : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.orange : .clear, lineWidth: 1.5))
                     }
-                    .buttonStyle(.plain)
                 }
-                // 入力位置
-                Rectangle()
-                    .fill(Color.accentColor)
-                    .frame(width: 2, height: 20)
+                cursorBar
             }
             if model.isRepeating {
                 Text("繰り返し入力中")
@@ -97,6 +92,71 @@ struct CurrentRowView: View {
                     .foregroundStyle(.tint)
             }
         }
+    }
+
+    /// 編集中：段の手順をすべて並べ、項目の間（すき間）をタップして入力位置を動かす（U16）
+    private func editingSteps(_ session: EditorModel.RowEditingSession) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                ForEach(Array(session.row.steps.enumerated()), id: \.element.id) { index, step in
+                    cursorGap(at: index, isCursor: session.cursor == index)
+                    StepChip(label: StitchTableFormatter.label(for: step), isSelected: false) {
+                        model.moveCursor(to: index + 1)
+                    }
+                    .accessibilityIdentifier("editing.step.\(index)")
+                }
+                cursorGap(at: session.row.steps.count, isCursor: session.cursor == session.row.steps.count)
+                if model.isRepeating {
+                    Text("繰り返し入力中")
+                        .font(.caption2)
+                        .foregroundStyle(.tint)
+                        .padding(.leading, 6)
+                }
+            }
+        }
+    }
+
+    /// 項目の間のすき間。タップで入力位置に。入力位置なら縦線を出す
+    private func cursorGap(at index: Int, isCursor: Bool) -> some View {
+        Button {
+            model.moveCursor(to: index)
+        } label: {
+            ZStack {
+                Color.clear.frame(width: 14, height: 28)
+                if isCursor {
+                    cursorBar
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("editing.gap.\(index)")
+    }
+
+    /// 入力位置の縦線
+    private var cursorBar: some View {
+        Rectangle()
+            .fill(Color.accentColor)
+            .frame(width: 2, height: 20)
+    }
+}
+
+/// 手順の1項目（チップ）
+private struct StepChip: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption)
+                .lineLimit(1)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(isSelected ? Color.orange.opacity(0.25) : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.orange : .clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
     }
 }
 
