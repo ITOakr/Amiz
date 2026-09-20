@@ -19,6 +19,8 @@ enum StitchSymbol {
         var chainSize: CGSize { CGSize(width: unit * 0.7, height: unit * 0.42) }
         /// 引き抜きの楕円の大きさ
         var slipSize: CGSize { CGSize(width: unit * 0.45, height: unit * 0.26) }
+        /// 束に編み入れた目の根元を編み入れ先から離す距離
+        var chainSpaceGap: CGFloat { unit * 0.34 }
     }
 
     /// 細編みの×をどこに置くか（domain-spec 11 の描き分け）
@@ -128,8 +130,12 @@ enum StitchSymbol {
             context.fill(fillPath(kind: .slipStitch, from: root, to: stitch.head, style: style), with: .color(color))
 
         case .regular:
-            // 根元ごとに1本描く。n目一度は根元が複数あり、頭で集まる
-            let roots = stitch.bases.isEmpty ? [virtualRoot(for: stitch, style: style)] : stitch.bases
+            // 根元ごとに1本描く。n目一度は根元が複数あり、頭で集まる。
+            // 束に編み入れた目は、根元を編み入れ先（アーチの中央）から少し離す（domain-spec 11）
+            var roots = stitch.bases.isEmpty ? [virtualRoot(for: stitch, style: style)] : stitch.bases
+            if stitch.into == .chainSpace {
+                roots = roots.map { detached($0, toward: stitch.head, by: style.chainSpaceGap) }
+            }
             let cross: CrossPlacement = if stitch.bases.count > 1 {
                 .nearRoot
             } else if stitch.sharedBaseCount > 1 {
@@ -153,6 +159,13 @@ enum StitchSymbol {
     // MARK: - 補助
 
     /// 根元がない目（鎖など）のために、向きから仮の根元を作る
+    /// 根元を頭の方へ `gap` だけ離した点（束に編み入れた目の根元）
+    private static func detached(_ root: CGPoint, toward head: CGPoint, by gap: CGFloat) -> CGPoint {
+        let d = distance(root, head)
+        guard d > gap * 2 else { return root }
+        return root + (head - root) * (gap / d)
+    }
+
     private static func virtualRoot(for stitch: LaidOutStitch, style: Style) -> CGPoint {
         let length = CGFloat(stitch.height) * style.unit
         let direction = CGPoint(x: cos(stitch.angle), y: sin(stitch.angle))

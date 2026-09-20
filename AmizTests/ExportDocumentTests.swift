@@ -13,7 +13,7 @@ struct ExportDocumentTests {
     @Test("凡例：長編みと鎖のモチーフ（3段目は束に細編み3目）、減らし目のある作品")
     func legendForOthers() {
         let motif = ExportDocument(title: "花", pattern: SamplePatterns.flowerMotif, options: ExportOptions())
-        #expect(motif.legendItems == [.stitch(.chain), .stitch(.singleCrochet), .stitch(.doubleCrochet), .turningChain, .closingSlipStitch, .increase(.singleCrochet)])
+        #expect(motif.legendItems == [.stitch(.chain), .stitch(.singleCrochet), .stitch(.doubleCrochet), .turningChain, .closingSlipStitch, .increase(.singleCrochet), .chainSpace])
 
         var pattern = SamplePatterns.bearHead
         pattern.rows[4] = Row(steps: [.turningChain(1), .untilEnd([.decrease(.singleCrochet)]), .closeRound()])
