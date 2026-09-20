@@ -24,6 +24,8 @@ struct AmizApp: App {
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.bearHead), title: "くまの頭") }
             case "motif":
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif), title: "花のモチーフ") }
+            case "rabbit":
+                NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.rabbitBody), title: "うさぎの胴体") }
             case "big":
                 // 性能確認：40段・約4900目
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.largeDisc(rows: 40)), title: "大きな円") }

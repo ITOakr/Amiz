@@ -32,6 +32,28 @@ enum SamplePatterns {
         ])
     }
 
+    /// 「うさぎの胴体」：螺旋編み 12 段（domain-spec TC-8）。12段目まで完成し、13段目を入力中
+    static var rabbitBody: Pattern {
+        func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {
+            (0..<count).map { _ in .stitch(kind) }
+        }
+        return Pattern(method: .spiral, foundation: .magicRing, rows: [
+            Row(steps: stitches(.singleCrochet, 6)),
+            Row(steps: [.untilEnd([.increase(.singleCrochet)])]),
+            Row(steps: [.repeating([.stitch(.singleCrochet), .increase(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 2) + [.increase(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 3) + [.increase(.singleCrochet)], times: 6)]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.untilEnd([.stitch(.singleCrochet)])]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 3) + [.decrease(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating(stitches(.singleCrochet, 2) + [.decrease(.singleCrochet)], times: 6)]),
+            Row(steps: [.repeating([.stitch(.singleCrochet), .decrease(.singleCrochet)], times: 6)]),
+            Row(),
+        ])
+    }
+
     /// 性能確認用の大きな作品：わの作り目から毎段6目ずつ増える平らな円（rows 段で約 3×rows×(rows+1) 目）
     static func largeDisc(rows: Int) -> Pattern {
         func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {
