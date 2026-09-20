@@ -28,7 +28,7 @@ struct AmizApp: App {
                 // 性能確認：40段・約4900目
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.largeDisc(rows: 40)), title: "大きな円") }
             default:
-                RootView()
+                HomeView()
             }
         }
         // 作品の保存先（SwiftData）。React でいう Provider に近く、下の View から modelContext で使える

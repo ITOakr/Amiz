@@ -14,10 +14,24 @@ final class EditorSmokeUITests: XCTestCase {
         return app
     }
 
+    /// 作品一覧（空）から新規作成して編集画面を開く
+    @MainActor
+    private func createWork(in app: XCUIApplication, name: String = "テスト") {
+        let newButton = app.buttons["home.newFromEmpty"]
+        XCTAssertTrue(newButton.waitForExistence(timeout: 5))
+        newButton.tap()
+        let nameField = app.textFields["newWork.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 2))
+        nameField.tap()
+        nameField.typeText(name)
+        app.buttons["newWork.create"].tap()
+    }
+
     /// TC-1「くまの頭」の5段をキーボードで入力し、目数表が ui-spec 8章のサンプルと一致することを確かめる
     @MainActor
     func testInputTC1AndReadTable() {
         let app = launchFresh()
+        createWork(in: app, name: "くまの頭")
 
         let singleCrochet = app.buttons["stitch.singleCrochet"]
         XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
@@ -87,6 +101,7 @@ final class EditorSmokeUITests: XCTestCase {
     @MainActor
     func testFinishRowConfirmation() {
         let app = launchFresh()
+        createWork(in: app)
 
         let singleCrochet = app.buttons["stitch.singleCrochet"]
         XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
@@ -135,6 +150,7 @@ final class EditorSmokeUITests: XCTestCase {
     @MainActor
     func testPatternPersistsAcrossLaunches() {
         let app = launchFresh()
+        createWork(in: app, name: "保存の確認")
         let singleCrochet = app.buttons["stitch.singleCrochet"]
         XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
         for _ in 0..<6 { singleCrochet.tap() }
@@ -146,9 +162,14 @@ final class EditorSmokeUITests: XCTestCase {
         sleep(2)
         app.terminate()
 
-        // 保存先を消さずに再起動
+        // 保存先を消さずに再起動 → 作品一覧にカードがあり、開くと続きから
         app.launchArguments = ["--ui-testing"]
         app.launch()
+        let card = app.buttons["home.work"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["保存の確認"].exists)
+        XCTAssertTrue(app.staticTexts["輪編み・2段目まで"].exists)
+        card.tap()
         XCTAssertTrue(app.staticTexts["2段目・この段 3目"].waitForExistence(timeout: 5))
         singleCrochet.tap()
         XCTAssertTrue(app.staticTexts["2段目・この段 4目"].waitForExistence(timeout: 2))
