@@ -72,6 +72,7 @@ struct ExportPageView: View {
             let transform = ChartTransform.fitting(document.layout, in: size, inset: 8)
             var painter = ChartPainter(layout: document.layout, transform: transform)
             painter.showsRowNumbers = true
+            painter.showsSeamMarks = document.pattern.method == .spiral
             painter.draw(in: &context)
         }
         .accessibilityIdentifier("export.chart")

@@ -14,6 +14,8 @@ struct ChartView: View {
     /// 選択中の目（U15）
     var selected: LaidOutStitch?
     var showsRowNumbers = true
+    /// 段の境目に区切り線を描く（螺旋編み。立ち上がりも引き抜きもないので境目が分かるように）
+    var showsSeamMarks = false
     /// 目をタップしたとき（選択の操作はフェーズ4）
     var onTapStitch: ((LaidOutStitch) -> Void)?
 
@@ -52,6 +54,7 @@ struct ChartView: View {
         painter.highlighted = highlighted
         painter.selected = selected
         painter.showsRowNumbers = showsRowNumbers
+        painter.showsSeamMarks = showsSeamMarks
         painter.draw(in: &context)
     }
 
@@ -148,6 +151,8 @@ struct ChartPainter {
     /// 選択中の目（太い橙）。書き出しでは nil
     var selected: LaidOutStitch?
     var showsRowNumbers = true
+    /// 段の境目の区切り線（螺旋編み）。段番号の下に薄く描く
+    var showsSeamMarks = false
 
     func draw(in context: inout GraphicsContext) {
         let style = StitchSymbol.Style(unit: transform.unit, lineWidth: max(1, min(2, transform.unit * 0.11)))
@@ -157,6 +162,17 @@ struct ChartPainter {
             let radius = ring.outerRadius * transform.unit
             let rect = CGRect(x: transform.origin.x - radius, y: transform.origin.y - radius, width: radius * 2, height: radius * 2)
             context.stroke(Path(ellipseIn: rect), with: .color(.secondary.opacity(0.15)), lineWidth: 0.5)
+        }
+
+        // 段の境目の区切り線（螺旋編み）：継ぎ目の角度に、段の内側から外側まで
+        if showsSeamMarks {
+            for ring in layout.rings {
+                let angle = ring.seamAngle
+                var path = Path()
+                path.move(to: transform.toScreen(CGPoint(x: ring.innerRadius * cos(angle), y: -ring.innerRadius * sin(angle))))
+                path.addLine(to: transform.toScreen(CGPoint(x: ring.outerRadius * cos(angle), y: -ring.outerRadius * sin(angle))))
+                context.stroke(path, with: .color(.secondary.opacity(0.45)), style: StrokeStyle(lineWidth: max(0.5, style.lineWidth * 0.6), dash: [3, 2]))
+            }
         }
 
         // 目。次に拾う前段の目は記号そのものを太い赤で描く（ハイライト）
