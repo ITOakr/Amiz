@@ -5,11 +5,19 @@ import XCTest
 /// 通常のテスト（スキーム Amiz）には含めない。確認したいときだけスキーム AmizUITests で実行する。
 /// 目的は「ボタンを押すとモデルが動き、画面に反映される」ことの確認で、細かい表示は見ない。
 final class EditorSmokeUITests: XCTestCase {
+    /// 保存先を空にして起動する（前のテストの作品が残らないように）
+    @MainActor
+    private func launchFresh() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--reset-store"]
+        app.launch()
+        return app
+    }
+
     /// TC-1「くまの頭」の5段をキーボードで入力し、目数表が ui-spec 8章のサンプルと一致することを確かめる
     @MainActor
     func testInputTC1AndReadTable() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchFresh()
 
         let singleCrochet = app.buttons["stitch.singleCrochet"]
         XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
@@ -78,8 +86,7 @@ final class EditorSmokeUITests: XCTestCase {
     /// 段を終えるときの確認（ui-spec 7-2）と拾いすぎ（domain-spec 23）
     @MainActor
     func testFinishRowConfirmation() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchFresh()
 
         let singleCrochet = app.buttons["stitch.singleCrochet"]
         XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
@@ -122,5 +129,28 @@ final class EditorSmokeUITests: XCTestCase {
         finish.tap()
         XCTAssertFalse(alert.exists)
         XCTAssertTrue(app.staticTexts["前段2目に対して3目拾っています"].waitForExistence(timeout: 2))
+    }
+
+    /// 自動保存：入力してアプリを終了・再起動しても、同じ作品が入力中の段から続けられる（tech-spec 6）
+    @MainActor
+    func testPatternPersistsAcrossLaunches() {
+        let app = launchFresh()
+        let singleCrochet = app.buttons["stitch.singleCrochet"]
+        XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
+        for _ in 0..<6 { singleCrochet.tap() }
+        app.buttons["op.finishRow"].tap()
+        for _ in 0..<3 { singleCrochet.tap() }
+        XCTAssertTrue(app.staticTexts["2段目・この段 3目"].waitForExistence(timeout: 2))
+
+        // 自動保存の待ち（0.4秒）より長く待ってから終了
+        sleep(2)
+        app.terminate()
+
+        // 保存先を消さずに再起動
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["2段目・この段 3目"].waitForExistence(timeout: 5))
+        singleCrochet.tap()
+        XCTAssertTrue(app.staticTexts["2段目・この段 4目"].waitForExistence(timeout: 2))
     }
 }
