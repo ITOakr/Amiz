@@ -19,6 +19,8 @@ struct EditorView: View {
     @AppStorage(AppSettings.autoTurningChainKey) private var autoTurningChain = true
     /// 図に段番号を表示（ui-spec 6-3）
     @AppStorage(AppSettings.showsRowNumbersKey) private var showsRowNumbers = true
+    /// 立ち上がりを1目と数えるか（ui-spec 6-3）
+    @AppStorage(AppSettings.turningChainCountingKey) private var turningChainCounting = TurningChainCounting.standard
     /// 図／目数表の切り替え
     @State private var tab: Tab = .chart
     /// 書き出しシート（ui-spec 6-2）
@@ -75,6 +77,17 @@ struct EditorView: View {
         .onChange(of: autoTurningChain, initial: true) { _, isOn in
             model.autoTurningChain = isOn
         }
+        .onChange(of: turningChainCounting, initial: true) { _, counting in
+            model.turningChainCounting = counting
+        }
+        // 立ち上がりを数えるかの確認（7-4。設定が「毎回選択」のとき）
+        .alert("立ち上がり", isPresented: isTurningChainQuestionPresented) {
+            Button("数える") { model.answerTurningChainQuestion(counted: true) }
+            Button("数えない") { model.answerTurningChainQuestion(counted: false) }
+            Button("キャンセル", role: .cancel) { model.cancelTurningChainQuestion() }
+        } message: {
+            Text(model.pendingTurningChainQuestion?.message ?? "")
+        }
         .onChange(of: model.pattern) { _, pattern in
             scheduleSave(pattern)
         }
@@ -83,6 +96,10 @@ struct EditorView: View {
             saveTask?.cancel()
             onPatternChange?(model.pattern)
         }
+    }
+
+    private var isTurningChainQuestionPresented: Binding<Bool> {
+        Binding(get: { model.pendingTurningChainQuestion != nil }, set: { if !$0 { model.cancelTurningChainQuestion() } })
     }
 
     private var isExportConfirmationPresented: Binding<Bool> {
