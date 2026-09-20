@@ -57,8 +57,8 @@ public enum StitchTableFormatter {
     /// 目数表の文章と違い、数えない立ち上がりや段を閉じる引き抜きも書く
     public static func label(for step: Step) -> String {
         switch step.kind {
-        case .turningChain(let chains):
-            "立ち上がり鎖\(chains)"
+        case .turningChain(let chains, let counted):
+            "立ち上がり鎖\(chains)" + turningChainCountNote(chains: chains, counted: counted)
         case .stitch(let kind, let into):
             placementPrefix(into) + kind.japaneseName
         case .increase(let kind, let count, let into):
@@ -91,10 +91,12 @@ public enum StitchTableFormatter {
     public static func foundationChainCount(for pattern: Pattern) -> Int? {
         guard case .chain(let stitchCount) = pattern.foundation else { return nil }
         var chains = 1
-        if case .turningChain(let firstRowChains) = pattern.rows.first?.steps.first?.kind {
+        var counted = false
+        if case .turningChain(let firstRowChains, let firstRowCounted) = pattern.rows.first?.steps.first?.kind {
             chains = firstRowChains
+            counted = firstRowCounted
         }
-        return stitchCount + chains - (chains >= 2 ? 1 : 0)
+        return stitchCount + chains - (counted ? 1 : 0)
     }
 
     /// 目数の表記（domain-spec 8）
@@ -187,10 +189,11 @@ public enum StitchTableFormatter {
             }
 
             switch step.kind {
-            case .turningChain(let chains):
-                // 数えない立ち上がり（鎖1目）は目数表には書かない（ui-spec 8章のサンプルに合わせる）
-                if chains >= 2 {
-                    items.append("立ち上がり鎖\(chains)目")
+            case .turningChain(let chains, let counted):
+                // 数えない鎖1目の立ち上がりは目数表には書かない（ui-spec 8章のサンプルに合わせる）。
+                // 標準と違う数え方なら「（数えない）」「（1目と数える）」を添える（domain-spec 6）
+                if chains >= 2 || counted {
+                    items.append("立ち上がり鎖\(chains)目" + turningChainCountNote(chains: chains, counted: counted))
                 }
             case .increase(let kind, let count, let into):
                 items.append(placementPrefix(into) + "\(kind.instructionName)\(count)目編み入れる")
@@ -227,6 +230,12 @@ public enum StitchTableFormatter {
             }
             return isSingle ? "\(unitText)×全目" : "（\(unitText)）を段の終わりまで"
         }
+    }
+
+    /// 立ち上がりの数え方が標準（鎖1目は数えない、2目以上は数える）と違うときの注記
+    static func turningChainCountNote(chains: Int, counted: Bool) -> String {
+        guard counted != StepKind.standardTurningChainCounted(chains: chains) else { return "" }
+        return counted ? "（1目と数える）" : "（数えない）"
     }
 
     /// 束に編み入れる場合の頭の言葉（束の扱いはフェーズ8で見直す）

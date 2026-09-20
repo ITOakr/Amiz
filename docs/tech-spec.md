@@ -142,7 +142,7 @@
   "foundation": { "type": "magicRing" },
   "rows": [
     { "id": "…", "steps": [
-      { "id": "…", "type": "turningChain", "chains": 1 },
+      { "id": "…", "type": "turningChain", "chains": 1, "counted": false },
       { "id": "…", "type": "repeat", "count": 6, "unit": [
         { "id": "…", "type": "stitch",   "stitch": "singleCrochet", "into": "stitch" },
         { "id": "…", "type": "increase", "stitch": "singleCrochet", "count": 2, "into": "stitch" }
@@ -153,7 +153,7 @@
 }
 ```
 
-その他の操作：`{"type":"decrease","stitch":"singleCrochet","count":2}`、`{"type":"skip"}`、`{"type":"leaveRemaining"}`。段の終わりまでの繰り返しは `"count": "untilEnd"`。鎖の作り目は `{"type":"chain","stitchCount":20}`。
+その他の操作：`{"type":"decrease","stitch":"singleCrochet","count":2}`、`{"type":"skip"}`、`{"type":"leaveRemaining"}`。段の終わりまでの繰り返しは `"count": "untilEnd"`。鎖の作り目は `{"type":"chain","stitchCount":20}`。立ち上がりの `"counted"`（1目と数えるか）が無い古いデータは、標準（鎖1目は数えない、2目以上は数える）として読む（domain 6）。
 
 **SwiftData を import しない理由**
 - 目の順番を確実に扱うため。SwiftData の関連データの配列は、保存・読み込みで順番が保証されない。段の中の目の順番がすべてのこのアプリでは、並び順の管理があらゆる処理に入り込んでしまう

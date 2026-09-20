@@ -7,22 +7,31 @@ import Foundation
 public enum PatternInput {
     /// 目ボタンを押す。先に選ぶ状態を適用した操作を入力中の段の末尾に追加する。
     /// その段でまだ鎖以外の目がなく、鎖以外の目を押したときは、段の先頭に立ち上がりを自動で入れる（ui-spec 5-6 U5）。
+    /// `turningChainCounted` は自動で入れる立ち上がりを1目と数えるか（nil なら標準。domain-spec 6）
     /// - Returns: 立ち上がりを自動で入れたか（繰り返し開始の位置をずらすために使う）
     @discardableResult
     public static func addStitch(
         _ kind: StitchKind,
         modifier: StitchModifier = .none,
         autoTurningChain: Bool = true,
+        turningChainCounted: Bool? = nil,
         to pattern: inout Pattern
     ) -> Bool {
         let index = ensureCurrentRow(in: &pattern)
         var row = pattern.rows[index]
         let result = insertStitch(
             kind, modifier: modifier, at: row.steps.count, in: &row,
-            method: pattern.method, autoTurningChain: autoTurningChain
+            method: pattern.method, autoTurningChain: autoTurningChain, turningChainCounted: turningChainCounted
         )
         pattern.rows[index] = row
         return result.insertedTurningChain
+    }
+
+    /// 目ボタンを押したときに、入力中の段の先頭に立ち上がりが自動で入るなら、その鎖の目数を返す（入らなければ nil）。
+    /// 「毎回選択」の設定で、入れる前に数えるかを聞くために使う（ui-spec 5-6）
+    public static func turningChainToInsert(for kind: StitchKind, autoTurningChain: Bool = true, in pattern: Pattern) -> Int? {
+        let row = pattern.currentRowIndex.map { pattern.rows[$0] } ?? Row()
+        return turningChainToInsert(for: kind, in: row, method: pattern.method, autoTurningChain: autoTurningChain)
     }
 
     /// 「飛ばす」。前段の目が残っていなければ何もしない（ui-spec 5-5）
@@ -84,19 +93,20 @@ public enum PatternInput {
     }
 
     /// 「立ち上がり」ボタン：段の先頭に立ち上がりを入れる。すでにあれば鎖の目数を変える（ui-spec 5-6 U23）。
-    /// 螺旋編みでは何もしない
+    /// `counted` は1目と数えるか（nil なら標準）。螺旋編みでは何もしない
     /// - Returns: 新しく先頭に入れたか（目数の変更や何もしなかったときは false）
     @discardableResult
-    public static func setTurningChain(chains: Int, in pattern: inout Pattern) -> Bool {
+    public static func setTurningChain(chains: Int, counted: Bool? = nil, in pattern: inout Pattern) -> Bool {
         guard pattern.method.usesTurningChain, (1...4).contains(chains) else { return false }
         let index = ensureCurrentRow(in: &pattern)
+        let step = Step.turningChain(chains, counted: counted)
 
         if case .turningChain = pattern.rows[index].steps.first?.kind {
             let id = pattern.rows[index].steps[0].id
-            pattern.rows[index].steps[0] = Step(id: id, kind: .turningChain(chains: chains))
+            pattern.rows[index].steps[0] = Step(id: id, kind: step.kind)
             return false
         }
-        pattern.rows[index].steps.insert(.turningChain(chains), at: 0)
+        pattern.rows[index].steps.insert(step, at: 0)
         return true
     }
 

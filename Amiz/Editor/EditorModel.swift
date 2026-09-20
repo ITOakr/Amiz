@@ -474,7 +474,7 @@ final class EditorModel {
 
     /// 選択中の目が立ち上がりなら、その鎖の目数
     var selectedTurningChainCount: Int? {
-        if case .turningChain(let chains) = selectedStep?.kind { chains } else { nil }
+        if case .turningChain(let chains, _) = selectedStep?.kind { chains } else { nil }
     }
 
     /// 選択中の目の表記と段番号（「細編み（3段目）」）
