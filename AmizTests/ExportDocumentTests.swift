@@ -54,11 +54,22 @@ struct ExportDocumentTests {
         let document = ExportDocument(title: "", pattern: pattern, options: ExportOptions())
         #expect(document.tableRows.count == 5)
         #expect(document.warnings.isEmpty)
+        #expect(document.confirmationMessage == nil)
+    }
+
+    @Test("警告のある段が複数なら「3・4・5段目」のように並べる")
+    func confirmationMessageForMultipleRows() {
+        var pattern = SamplePatterns.bearHead
+        // 3段目を前段を拾い切らない手順にする → 3段目の目数が減り、4段目・5段目も合わなくなる
+        pattern.rows[2] = Row(steps: [.turningChain(1), .stitch(.singleCrochet), .closeRound()])
+        let document = ExportDocument(title: "", pattern: pattern, options: ExportOptions())
+        #expect(document.confirmationMessage == "目数が合っていない段があります（3・4・5段目）。このまま書き出しますか？")
     }
 
     @Test("入力途中の最後の段が空でなければ、書き出しでは警告の対象になる（7-3 の確認が出る）")
     func unfinishedLastRowWarns() {
         let document = ExportDocument(title: "", pattern: SamplePatterns.bearHead, options: ExportOptions())
         #expect(document.warnings.map(\.rowNumber) == [5])
+        #expect(document.confirmationMessage == "目数が合っていない段があります（5段目）。このまま書き出しますか？")
     }
 }

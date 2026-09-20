@@ -129,6 +129,14 @@ struct ExportDocument {
         return expansion.warnings(excludingRowAt: excluded)
     }
 
+    /// 書き出し前の確認の文（ui-spec 7-3）。警告がなければ nil
+    var confirmationMessage: String? {
+        let numbers = warnings.map(\.rowNumber)
+        guard !numbers.isEmpty else { return nil }
+        let list = numbers.map(String.init).joined(separator: "・")
+        return "目数が合っていない段があります（\(list)段目）。このまま書き出しますか？"
+    }
+
     /// 目数表の行（空の末尾の段は含めない）
     var tableRows: [StitchTableRow] {
         var trimmed = pattern
