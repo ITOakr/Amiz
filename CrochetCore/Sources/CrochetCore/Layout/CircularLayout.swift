@@ -49,10 +49,12 @@ public enum CircularLayout {
                 ? (2 * Double.pi) / Double(max(counted.count, 1))
                 : (2 * Double.pi) / Double(previousHeadAngles.count)
 
-            // 数える目ごとの根元の角度（拾った前段の目の頭の角度。鎖などは空）
+            // 数える目ごとの根元の角度（拾った前段の目の頭の角度。鎖などは空）。
+            // 束に編み入れた目は、拾ったアーチ（鎖のまとまり）の中央に根元を1つ置く（domain-spec 11）
             let baseAngles: [[Double]] = counted.map { _, stitch in
                 guard rowIndex > 0, !stitch.picks.isEmpty else { return [] }
-                return stitch.picks.map { previousAngle(at: $0, in: previousHeadAngles) }
+                let angles = stitch.picks.map { previousAngle(at: $0, in: previousHeadAngles) }
+                return stitch.into == .chainSpace ? [meanAngle(angles)] : angles
             }
 
             let isClosed = row.stitches.contains { $0.role == .closingSlipStitch }

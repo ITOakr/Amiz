@@ -175,6 +175,16 @@ private struct LegendSymbolView: View {
                 for dx in [-7.0, 7.0] {
                     context.stroke(StitchSymbol.strokePath(kind: kind, from: CGPoint(x: size.width / 2 + dx, y: size.height - 4), to: CGPoint(x: size.width / 2, y: 4), style: style, cross: .nearRoot), with: .color(color), lineWidth: style.lineWidth)
                 }
+            case .chainSpace:
+                // 鎖2目のアーチと、その上に根元を離した細編み
+                let archY = size.height - 6
+                for dx in [-6.0, 6.0] {
+                    let center = CGPoint(x: size.width / 2 + dx, y: archY)
+                    context.stroke(StitchSymbol.strokePath(kind: .chain, from: CGPoint(x: center.x - 1, y: center.y), to: center, style: style), with: .color(color), lineWidth: style.lineWidth)
+                }
+                let root = CGPoint(x: size.width / 2, y: archY - 5)
+                let head = CGPoint(x: size.width / 2, y: 4)
+                context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: root, to: head, style: style, cross: .nearHead), with: .color(color), lineWidth: style.lineWidth)
             }
         }
         .frame(width: 32, height: 32)

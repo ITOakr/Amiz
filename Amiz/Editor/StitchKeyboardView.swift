@@ -108,11 +108,11 @@ struct StitchKeyboardView: View {
                 model.toggleDecrease()
             }
             .accessibilityIdentifier("modifier.decrease")
-            // 束に編み入れる（モチーフ）はフェーズ8で有効にする
+            // 束に編み入れる（鎖のアーチをすくう。domain-spec 21）。「2目一度」とは同時に選べない
             ModifierButton(title: "束に", isSelected: model.modifier.chainSpace) {
                 model.toggleChainSpace()
             }
-            .disabled(true)
+            .accessibilityIdentifier("modifier.chainSpace")
             ModifierButton(title: "飛ばす", isSelected: false) {
                 model.pressSkip()
             }
