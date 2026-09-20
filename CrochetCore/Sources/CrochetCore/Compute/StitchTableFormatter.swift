@@ -238,7 +238,7 @@ public enum StitchTableFormatter {
         return counted ? "（1目と数える）" : "（数えない）"
     }
 
-    /// 束に編み入れる場合の頭の言葉（束の扱いはフェーズ8で見直す）
+    /// 束に編み入れる場合の頭の言葉（domain-spec 21）
     private static func placementPrefix(_ placement: Placement) -> String {
         placement == .chainSpace ? "束に" : ""
     }
