@@ -20,8 +20,9 @@ public struct ExpandedStitch: Hashable, Sendable {
     public var role: Role
     /// 編み入れ先
     public var into: Placement
-    /// 前段のどの目を拾ったか。前段の「数える目」の並びでの位置（0始まり）。
-    /// 鎖編み・数えない立ち上がり・段を閉じる引き抜きは空。n目一度は n 個分の範囲
+    /// 前段のどの目を拾ったか。前段の「数える目」の並び（編んだ順）での位置（0始まり）。
+    /// 鎖編み・数えない立ち上がり・段を閉じる引き抜きは空。n目一度は n 個分の範囲。
+    /// 往復編みは前段を逆順に拾うので、段の中で番号が下がっていく（`RowExpansion.picksReversed`）
     public var picks: Range<Int>
     /// 目数に数えるか（domain-spec 6・8）
     public var isCounted: Bool

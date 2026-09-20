@@ -18,4 +18,10 @@ public enum WorkingMethod: String, Codable, CaseIterable, Hashable, Sendable {
     public var closesRound: Bool {
         self == .joinedRounds
     }
+
+    /// 前段を逆順に拾う編み方か（domain-spec 21）。
+    /// 往復編みは編み地を返すので、次の段の1目めは前段の最後に編んだ目に入る。輪編み・螺旋編みは前段の1目めから順に拾う
+    public var picksPreviousRowReversed: Bool {
+        self == .flat
+    }
 }

@@ -54,6 +54,22 @@ enum SamplePatterns {
         ])
     }
 
+    /// 「ブランケットの縁」：往復編み 6 段、鎖の作り目 20 目（domain-spec TC-9）。6段目まで完成し、7段目を入力中
+    static var blanketEdge: Pattern {
+        func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {
+            (0..<count).map { _ in .stitch(kind) }
+        }
+        return Pattern(method: .flat, foundation: .chain(stitchCount: 20), rows: [
+            Row(steps: [.turningChain(1)] + stitches(.singleCrochet, 20)),
+            Row(steps: [.turningChain(3)] + stitches(.doubleCrochet, 19)),
+            Row(steps: [.turningChain(1), .increase(.singleCrochet)] + stitches(.singleCrochet, 18) + [.increase(.singleCrochet)]),
+            Row(steps: [.turningChain(2)] + stitches(.halfDoubleCrochet, 21)),
+            Row(steps: [.turningChain(1), .decrease(.singleCrochet)] + stitches(.singleCrochet, 18) + [.decrease(.singleCrochet)]),
+            Row(steps: [.turningChain(3)] + stitches(.doubleCrochet, 19)),
+            Row(),
+        ])
+    }
+
     /// 性能確認用の大きな作品：わの作り目から毎段6目ずつ増える平らな円（rows 段で約 3×rows×(rows+1) 目）
     static func largeDisc(rows: Int) -> Pattern {
         func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {

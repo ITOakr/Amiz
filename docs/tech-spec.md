@@ -103,8 +103,8 @@
 | 型 | 内容 | 対応する仕様 |
 |---|---|---|
 | `Expander` | 段の手順を展開する。`Pattern.expanded()` が省略形 | domain 15、17、21 |
-| `ExpandedStitch` | 展開後の1目。どの操作から生まれたか（`StitchRef`）、種類、役割（普通／立ち上がり／段を閉じる引き抜き）、前段のどの目を拾ったか（`picks`）、数えるか | domain 6、7、8、21 |
-| `RowExpansion` | 段の展開結果。目の列、拾った目数、前段の目数、「残りは編まない」の有無、繰り返しの実際の回数、問題（`issues`）。合計目数・鎖抜き目数は計算プロパティ | domain 8、17、23 |
+| `ExpandedStitch` | 展開後の1目。どの操作から生まれたか（`StitchRef`）、種類、役割（普通／立ち上がり／段を閉じる引き抜き）、前段のどの目を拾ったか（`picks`。前段の編んだ順の番号。往復編みでは逆順に拾うので番号が下がる）、数えるか | domain 6、7、8、21 |
+| `RowExpansion` | 段の展開結果。目の列、拾った目数、前段の目数、「残りは編まない」の有無、繰り返しの実際の回数、問題（`issues`）、逆順に拾う段か（`picksReversed`）。合計目数・鎖抜き目数・次に拾う目の番号（`nextPickIndex`）は計算プロパティ | domain 8、17、21、23 |
 | `PatternExpansion` | 編み図全体の展開結果（段ごとの `RowExpansion`） | |
 | `ConsistencyChecker` | 段ごとの目数の警告を出す。`PatternExpansion.warnings(excludingRowAt:)` が省略形。入力中の段は呼び出し側が除外する | domain 23 |
 | `RowWarning` | 警告。段の位置、種類（不足／過多）、警告文 | domain 23、ui 5-4 |

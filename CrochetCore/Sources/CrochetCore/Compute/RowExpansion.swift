@@ -24,6 +24,8 @@ public struct RowExpansion: Hashable, Sendable {
     public var repeatCounts: [UUID: Int]
     /// 展開中に見つかった問題
     public var issues: [Issue]
+    /// 前段を逆順に拾う段か（往復編み。domain-spec 21）。`picks` の番号は前段の編んだ順のままで、拾う順だけが逆になる
+    public var picksReversed: Bool
 
     public init(
         rowID: UUID,
@@ -32,7 +34,8 @@ public struct RowExpansion: Hashable, Sendable {
         previousCount: Int? = nil,
         leavesRemaining: Bool = false,
         repeatCounts: [UUID: Int] = [:],
-        issues: [Issue] = []
+        issues: [Issue] = [],
+        picksReversed: Bool = false
     ) {
         self.rowID = rowID
         self.stitches = stitches
@@ -41,6 +44,7 @@ public struct RowExpansion: Hashable, Sendable {
         self.leavesRemaining = leavesRemaining
         self.repeatCounts = repeatCounts
         self.issues = issues
+        self.picksReversed = picksReversed
     }
 
     /// 合計目数（domain-spec 8）
@@ -61,6 +65,13 @@ public struct RowExpansion: Hashable, Sendable {
     /// 前段の目のうち、まだ拾っていない数。前段の目数が決まらない段では nil。拾いすぎていれば 0
     public var unpickedCount: Int? {
         previousCount.map { max(0, $0 - pickedCount) }
+    }
+
+    /// 次に拾う前段の目の番号（前段の「数える目」の編んだ順）。前段を拾い切っていれば nil。
+    /// 逆順に拾う段では前段の最後の目から下がっていく
+    public var nextPickIndex: Int? {
+        guard let previousCount, pickedCount < previousCount else { return nil }
+        return picksReversed ? previousCount - 1 - pickedCount : pickedCount
     }
 }
 
