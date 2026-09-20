@@ -28,6 +28,19 @@ enum TestPatterns {
         return Pattern(method: .spiral, foundation: .magicRing, rows: Array(rows.prefix(count)))
     }
 
+    /// TC-9 往復編み「ブランケットの縁」（鎖の作り目 20 目、6段）。`rows` で先頭から何段ぶん含めるか
+    static func tc9(rows count: Int = 6) -> Pattern {
+        let rows: [Row] = [
+            Row(steps: [.turningChain(1)] + stitches(.singleCrochet, 20)),
+            Row(steps: [.turningChain(3)] + stitches(.doubleCrochet, 19)),
+            Row(steps: [.turningChain(1), .increase(.singleCrochet)] + stitches(.singleCrochet, 18) + [.increase(.singleCrochet)]),
+            Row(steps: [.turningChain(2)] + stitches(.halfDoubleCrochet, 21)),
+            Row(steps: [.turningChain(1), .decrease(.singleCrochet)] + stitches(.singleCrochet, 18) + [.decrease(.singleCrochet)]),
+            Row(steps: [.turningChain(3)] + stitches(.doubleCrochet, 19)),
+        ]
+        return Pattern(method: .flat, foundation: .chain(stitchCount: 20), rows: Array(rows.prefix(count)))
+    }
+
     /// TC-1 わの作り目からの輪編み（細編み）
     ///
     /// | 段 | 手順 | 目数 |

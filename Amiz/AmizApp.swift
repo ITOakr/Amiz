@@ -24,6 +24,8 @@ struct AmizApp: App {
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.bearHead), title: "くまの頭") }
             case "motif":
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif), title: "花のモチーフ") }
+            case "blanket":
+                NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.blanketEdge), title: "ブランケットの縁") }
             case "rabbit":
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.rabbitBody), title: "うさぎの胴体") }
             case "big":

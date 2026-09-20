@@ -9,8 +9,9 @@ public enum Expander {
         var rows: [RowExpansion] = []
         var previousCount = initialPreviousCount(for: pattern.foundation)
 
+        let reversed = pattern.method.picksPreviousRowReversed
         for row in pattern.rows {
-            let expansion = expand(row: row, previousCount: previousCount)
+            let expansion = expand(row: row, previousCount: previousCount, picksReversed: reversed)
             rows.append(expansion)
             previousCount = expansion.totalCount
         }
@@ -22,8 +23,9 @@ public enum Expander {
     /// - Parameters:
     ///   - row: 段
     ///   - previousCount: 前段の目数。わの作り目に編み入れる1段目は nil
-    public static func expand(row: Row, previousCount: Int?) -> RowExpansion {
-        var state = State(rowID: row.id, previousCount: previousCount)
+    ///   - picksReversed: 前段を逆順に拾うか（往復編み）
+    public static func expand(row: Row, previousCount: Int?, picksReversed: Bool = false) -> RowExpansion {
+        var state = State(rowID: row.id, previousCount: previousCount, picksReversed: picksReversed)
         expand(steps: row.steps, repetition: 0, state: &state)
 
         return RowExpansion(
@@ -33,7 +35,8 @@ public enum Expander {
             previousCount: previousCount,
             leavesRemaining: state.leavesRemaining,
             repeatCounts: state.repeatCounts,
-            issues: state.issues
+            issues: state.issues,
+            picksReversed: picksReversed
         )
     }
 
@@ -50,21 +53,31 @@ public enum Expander {
     private struct State {
         let rowID: UUID
         let previousCount: Int?
-        /// 前段の次に拾う目の位置
+        /// 前段を逆順に拾うか（往復編み）。前段の目数が決まらない段では順方向と同じ
+        let picksReversed: Bool
+        /// 前段から拾った数（拾う順のカーソル）
         var cursor = 0
         var stitches: [ExpandedStitch] = []
         var leavesRemaining = false
         var repeatCounts: [UUID: Int] = [:]
         var issues: [RowExpansion.Issue] = []
 
-        init(rowID: UUID, previousCount: Int?) {
+        init(rowID: UUID, previousCount: Int?, picksReversed: Bool = false) {
             self.rowID = rowID
             self.previousCount = previousCount
+            self.picksReversed = picksReversed
         }
 
-        /// 前段の目を count 目拾い、カーソルを進める
+        /// 前段の目を count 目拾い、カーソルを進める。返すのは前段の編んだ順での番号。
+        /// 逆順に拾う段では前段の最後の目から下がっていく（拾いすぎると負の番号になる）
         mutating func pick(_ count: Int) -> Range<Int> {
-            let range = cursor..<(cursor + count)
+            let range: Range<Int>
+            if picksReversed, let previousCount {
+                let end = previousCount - cursor
+                range = (end - count)..<end
+            } else {
+                range = cursor..<(cursor + count)
+            }
             cursor += count
             return range
         }

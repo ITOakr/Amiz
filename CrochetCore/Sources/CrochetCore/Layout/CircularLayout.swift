@@ -280,7 +280,7 @@ public enum CircularLayout {
     /// 前段の目の頭の角度。拾いすぎで前段の範囲を超えたら、同じ間隔で回り続けたとみなす
     private static func previousAngle(at index: Int, in headAngles: [Double]) -> Double {
         guard !headAngles.isEmpty else { return 0 }
-        if index < headAngles.count { return headAngles[index] }
+        if headAngles.indices.contains(index) { return headAngles[index] }
         let step = (2 * Double.pi) / Double(headAngles.count)
         return headAngles[0] + step * Double(index)
     }
