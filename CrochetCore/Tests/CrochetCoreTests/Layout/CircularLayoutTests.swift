@@ -246,3 +246,50 @@ struct CircularLayoutTests {
         #expect(countedStitches(of: overLayout, row: 1).count == 5)
     }
 }
+
+/// 束に編み入れた目の図（domain-spec 11、TC-10）
+@Suite("束に編み入れた目のレイアウト")
+struct ChainSpaceLayoutTests {
+    @Test("円形図：束の目の根元はアーチ（鎖2目）の中央に1つ。同じアーチの3目は根元を共有して広がる")
+    func circular() {
+        let layout = TestPatterns.tc10().circularLayout()
+        let row3 = layout.stitches.filter { $0.rowIndex == 2 && $0.role == .regular }
+        #expect(row3.count == 36)
+        let first = row3[0]
+        #expect(first.into == .chainSpace)
+        #expect(first.bases.count == 1)
+        #expect(first.sharedBaseCount == 3)
+        #expect(row3[1].bases == first.bases && row3[2].bases == first.bases)
+
+        // 根元の角度は、拾った2目の鎖（前段の 1・2 目め）の中間
+        let chain1 = layout.countedStitch(rowIndex: 1, countedIndex: 1)!
+        let chain2 = layout.countedStitch(rowIndex: 1, countedIndex: 2)!
+        let mid = CGPoint(x: (chain1.head.x + chain2.head.x) / 2, y: (chain1.head.y + chain2.head.y) / 2)
+        let baseAngle = atan2(-(first.bases[0].y - layout.center.y), first.bases[0].x - layout.center.x)
+        let midAngle = atan2(-(mid.y - layout.center.y), mid.x - layout.center.x)
+        #expect(abs(baseAngle - midAngle) < 0.01)
+        // 3目の頭は根元の周りに広がる（角度が単調に進む）
+        let angles = row3.prefix(3).map { $0.polarAngle }
+        #expect(angles[0] < angles[1] && angles[1] < angles[2])
+    }
+
+    @Test("平面図：束の目の根元はアーチの中央（2目の鎖の x の平均）に1つ")
+    func flat() {
+        var pattern = Pattern(method: .flat, foundation: .chain(stitchCount: 10))
+        pattern.rows.append(Row(steps: [
+            .turningChain(3), .stitch(.chain), .stitch(.chain),
+            .skip(), .skip(), .stitch(.doubleCrochet), .stitch(.chain), .stitch(.chain),
+            .skip(), .skip(), .stitch(.doubleCrochet),
+        ]))
+        pattern.rows.append(Row(steps: [.turningChain(1), .repeating([.increase(.singleCrochet, count: 3, into: .chainSpace)], times: 2)]))
+        let layout = pattern.flatLayout()
+        let row2 = layout.stitches.filter { $0.rowIndex == 1 && $0.role == .regular }
+        #expect(row2.count == 6)
+        // 最初のアーチは前段の 4・5 目め（逆順なので最後のアーチ）。根元はその x の平均
+        let chain4 = layout.countedStitch(rowIndex: 0, countedIndex: 4)!
+        let chain5 = layout.countedStitch(rowIndex: 0, countedIndex: 5)!
+        #expect(row2[0].bases.count == 1)
+        #expect(abs(row2[0].bases[0].x - (chain4.head.x + chain5.head.x) / 2) < 0.001)
+        #expect(row2[0].sharedBaseCount == 3)
+    }
+}

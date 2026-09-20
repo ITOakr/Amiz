@@ -59,9 +59,11 @@ public enum FlatLayout {
             let topY = baseY - rowHeight
             let counted = row.stitches.enumerated().filter { $0.element.isCounted }
 
-            // 数える目ごとの根元の x（拾った前段の目の頭）。鎖などは空
+            // 数える目ごとの根元の x（拾った前段の目の頭）。鎖などは空。
+            // 束に編み入れた目は、拾ったアーチ（鎖のまとまり）の中央に根元を1つ置く（domain-spec 11）
             let baseXs: [[Double]] = counted.map { _, stitch in
-                stitch.picks.map { previousX(at: $0, in: previousXs, direction: direction) }
+                let xs = stitch.picks.map { previousX(at: $0, in: previousXs, direction: direction) }
+                return stitch.into == .chainSpace ? [mean(xs)] : xs
             }
 
             let isLastRow = rowIndex == expansion.rows.count - 1

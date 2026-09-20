@@ -25,6 +25,8 @@ enum LegendItem: Hashable, Identifiable {
     case closingSlipStitch
     case increase(StitchKind)
     case decrease(StitchKind)
+    /// 束に編み入れる（鎖のアーチをすくう。根元を離して描く。domain-spec 11）
+    case chainSpace
 
     var id: String {
         switch self {
@@ -33,6 +35,7 @@ enum LegendItem: Hashable, Identifiable {
         case .closingSlipStitch: "closingSlipStitch"
         case .increase(let kind): "increase.\(kind.rawValue)"
         case .decrease(let kind): "decrease.\(kind.rawValue)"
+        case .chainSpace: "chainSpace"
         }
     }
 
@@ -43,6 +46,7 @@ enum LegendItem: Hashable, Identifiable {
         case .closingSlipStitch: "段を閉じる引き抜き"
         case .increase(let kind): "\(kind.instructionName)2目編み入れる（増し目）"
         case .decrease(let kind): "\(kind.instructionName)2目一度（減らし目）"
+        case .chainSpace: "束に編み入れる（鎖のアーチをすくう）"
         }
     }
 
@@ -53,6 +57,7 @@ enum LegendItem: Hashable, Identifiable {
         var decreases: Set<StitchKind> = []
         var hasTurningChain = false
         var hasClosing = false
+        var hasChainSpace = false
 
         for row in expansion.rows {
             for stitch in row.stitches {
@@ -65,6 +70,7 @@ enum LegendItem: Hashable, Identifiable {
                     kinds.insert(stitch.kind)
                     // 前段を複数目まとめて拾うのは減らし目。束（アーチの鎖をまとめて拾う）は違う
                     if stitch.picks.count > 1, stitch.into != .chainSpace { decreases.insert(stitch.kind) }
+                    if stitch.into == .chainSpace { hasChainSpace = true }
                 }
             }
             // 同じ根元を共有する目（増し目）
@@ -79,6 +85,7 @@ enum LegendItem: Hashable, Identifiable {
         if hasClosing { items.append(.closingSlipStitch) }
         items += StitchKind.allCases.filter { increases.contains($0) }.map { .increase($0) }
         items += StitchKind.allCases.filter { decreases.contains($0) }.map { .decrease($0) }
+        if hasChainSpace { items.append(.chainSpace) }
         return items
     }
 }
