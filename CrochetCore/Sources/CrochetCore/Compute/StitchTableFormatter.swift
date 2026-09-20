@@ -253,3 +253,24 @@ extension StitchKind {
         self == .chain ? "鎖" : japaneseName
     }
 }
+
+extension WorkingMethod {
+    /// 日本語の名前（作品一覧・新規作成・ツールバーの副題に使う）
+    public var japaneseName: String {
+        switch self {
+        case .flat: "往復編み"
+        case .joinedRounds: "輪編み"
+        case .spiral: "螺旋編み"
+        }
+    }
+}
+
+extension FoundationKind {
+    /// 日本語の名前
+    public var japaneseName: String {
+        switch self {
+        case .magicRing: "わの作り目"
+        case .chain: "鎖の作り目"
+        }
+    }
+}
