@@ -28,6 +28,12 @@ enum SamplePatterns {
                 .untilEnd([.stitch(.doubleCrochet), .stitch(.chain), .stitch(.chain)]),
                 .closeRound(),
             ]),
+            // 3段目：鎖のアーチに束で細編み3目ずつ（TC-10）
+            Row(steps: [
+                .turningChain(1),
+                .untilEnd([.increase(.singleCrochet, count: 3, into: .chainSpace)]),
+                .closeRound(),
+            ]),
             Row(),
         ])
     }
