@@ -73,12 +73,39 @@ public struct RowRing: Hashable, Sendable {
     }
 }
 
+/// 平面図（往復編み）の段の帯。段番号と方向の矢印、補助線に使う
+public struct RowBand: Hashable, Sendable {
+    public var rowIndex: Int
+    /// 根元側の y（画面座標。下が +）
+    public var baseY: Double
+    /// 頭側の y
+    public var topY: Double
+    /// 手順を進める方向（+1 なら左から右、-1 なら右から左）
+    public var direction: Double
+    /// 段の始まりの端の x（立ち上がりを置く位置。段番号と矢印はこの外側に置く）
+    public var seamX: Double
+
+    public init(rowIndex: Int, baseY: Double, topY: Double, direction: Double, seamX: Double) {
+        self.rowIndex = rowIndex
+        self.baseY = baseY
+        self.topY = topY
+        self.direction = direction
+        self.seamX = seamX
+    }
+}
+
 /// 図全体のレイアウト結果。保存せず、展開結果から毎回計算する（tech-spec 5-1）。
+///
+/// 円形図（輪編み・螺旋編み）は `rings`、平面図（往復編み）は `bands` と `foundationChain` を持つ。目の座標の持ち方は共通
 public struct ChartLayout: Hashable, Sendable {
     /// すべての目（段の順、段の中は編む順）
     public var stitches: [LaidOutStitch]
-    /// 段ごとの輪
+    /// 段ごとの輪（円形図）
     public var rings: [RowRing]
+    /// 段ごとの帯（平面図）
+    public var bands: [RowBand]
+    /// 作り目の鎖の位置（平面図。鎖の作り目の n 目を編んだ順に）
+    public var foundationChain: [CGPoint]
     /// 図の中心
     public var center: CGPoint
     /// 図全体を含む矩形（記号の余白込み）
@@ -92,9 +119,14 @@ public struct ChartLayout: Hashable, Sendable {
         let countedIndex: Int
     }
 
-    public init(stitches: [LaidOutStitch], rings: [RowRing], center: CGPoint, bounds: CGRect) {
+    public init(
+        stitches: [LaidOutStitch], rings: [RowRing] = [], bands: [RowBand] = [], foundationChain: [CGPoint] = [],
+        center: CGPoint, bounds: CGRect
+    ) {
         self.stitches = stitches
         self.rings = rings
+        self.bands = bands
+        self.foundationChain = foundationChain
         self.center = center
         self.bounds = bounds
         var byRef: [StitchRef: Int] = [:]
