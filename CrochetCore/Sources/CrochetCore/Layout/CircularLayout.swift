@@ -92,13 +92,16 @@ public enum CircularLayout {
                 } else {
                     // 数えない目は段の始まりの空き（seam）に置く。同じ角度でも高さで分ける：
                     // 立ち上がり（鎖1目）は根元寄りの小さな楕円、段を閉じる引き抜きは頭の近くの点
-                    // （×は中ほどが幅広く根元と頭の近くは細いので、隣の目と触れない）
+                    // （×は中ほどが幅広く根元と頭の近くは細いので、隣の目と触れない）。
+                    // 数えない立ち上がりが鎖2目以上なら、鎖の目数ぶんの高さ（引き抜きに触れない範囲）で描く
                     let angle: Double
                     let radius: Double
                     switch stitch.role {
-                    case .turningChain:
+                    case .turningChain(let chains):
                         angle = seamAngle
-                        radius = innerRadius + options.uncountedTurningChainHeight
+                        radius = chains == 1
+                            ? innerRadius + options.uncountedTurningChainHeight
+                            : innerRadius + min(Double(chains), rowHeight - options.closingSlipInset - 0.25)
                     case .closingSlipStitch:
                         angle = seamAngle
                         radius = outerRadius - options.closingSlipInset

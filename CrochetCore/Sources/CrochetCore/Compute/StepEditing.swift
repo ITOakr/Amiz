@@ -111,18 +111,31 @@ extension PatternInput {
         return true
     }
 
-    /// 指定した段の立ち上がりの鎖の目数を変える（なければ先頭に入れる）。螺旋編みでは何もしない
+    /// 指定した段の立ち上がりの鎖の目数を変える（なければ先頭に入れる）。`counted` は1目と数えるか（nil なら標準）。
+    /// 螺旋編みでは何もしない
     /// - Returns: 変えたか（新しく入れた場合も true）
     @discardableResult
-    public static func setTurningChain(chains: Int, rowID: UUID, in pattern: inout Pattern) -> Bool {
+    public static func setTurningChain(chains: Int, counted: Bool? = nil, rowID: UUID, in pattern: inout Pattern) -> Bool {
         guard pattern.method.usesTurningChain, (1...4).contains(chains),
               let rowIndex = pattern.rows.firstIndex(where: { $0.id == rowID }) else { return false }
+        let step = Step.turningChain(chains, counted: counted)
         if case .turningChain = pattern.rows[rowIndex].steps.first?.kind {
             let id = pattern.rows[rowIndex].steps[0].id
-            pattern.rows[rowIndex].steps[0] = Step(id: id, kind: .turningChain(chains: chains))
+            pattern.rows[rowIndex].steps[0] = Step(id: id, kind: step.kind)
         } else {
-            pattern.rows[rowIndex].steps.insert(.turningChain(chains), at: 0)
+            pattern.rows[rowIndex].steps.insert(step, at: 0)
         }
+        return true
+    }
+
+    /// 指定した段の立ち上がりを1目と数えるかを変える（ui-spec U15）。立ち上がりがなければ何もしない
+    /// - Returns: 変えたか
+    @discardableResult
+    public static func setTurningChainCounted(_ counted: Bool, rowID: UUID, in pattern: inout Pattern) -> Bool {
+        guard let rowIndex = pattern.rows.firstIndex(where: { $0.id == rowID }),
+              case .turningChain(let chains, _) = pattern.rows[rowIndex].steps.first?.kind else { return false }
+        let id = pattern.rows[rowIndex].steps[0].id
+        pattern.rows[rowIndex].steps[0] = Step(id: id, kind: .turningChain(chains: chains, counted: counted))
         return true
     }
 

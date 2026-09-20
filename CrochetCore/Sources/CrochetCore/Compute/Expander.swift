@@ -82,9 +82,8 @@ public enum Expander {
 
     private static func expand(step: Step, repetition: Int, state: inout State) {
         switch step.kind {
-        case .turningChain(let chains):
-            // 鎖2目以上なら1目と数え、前段の1目を拾う。鎖1目なら数えず、拾わない（domain-spec 6・21）
-            let counted = chains >= 2
+        case .turningChain(let chains, let counted):
+            // 1目と数える立ち上がりは前段の1目を拾う。数えないなら拾わない（domain-spec 6・21）
             state.stitches.append(ExpandedStitch(
                 ref: state.ref(step, repetition: repetition),
                 kind: .chain,
@@ -175,8 +174,8 @@ public enum Expander {
     static func picksPerIteration(of steps: [Step]) -> Int {
         steps.reduce(0) { total, step in
             switch step.kind {
-            case .turningChain(let chains):
-                total + (chains >= 2 ? 1 : 0)
+            case .turningChain(_, let counted):
+                total + (counted ? 1 : 0)
             case .stitch(let kind, _), .increase(let kind, _, _):
                 total + (kind.takesPreviousStitch ? 1 : 0)
             case .decrease(_, let count):

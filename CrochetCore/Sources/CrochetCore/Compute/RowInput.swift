@@ -5,7 +5,8 @@ import Foundation
 /// `PatternInput` の入力中の段への操作は、すべて「最後の段の末尾」への入力なので、
 /// ここにある段＋位置を指定する関数の特別な場合として扱える。
 extension PatternInput {
-    /// 段の `index` の位置に目を入れる。先に選ぶ状態を適用し、その段にまだ鎖以外の目がなければ立ち上がりを先頭に自動で入れる
+    /// 段の `index` の位置に目を入れる。先に選ぶ状態を適用し、その段にまだ鎖以外の目がなければ立ち上がりを先頭に自動で入れる。
+    /// `turningChainCounted` は自動で入れる立ち上がりを1目と数えるか（nil なら標準）
     /// - Returns: 入れた操作の数（立ち上がりが自動で入れば 2、そうでなければ 1）。入れた後の入力位置は `index + 戻り値`。
     ///   ただし立ち上がりは先頭に入るので、`index` より前に1つ増える
     @discardableResult
@@ -15,7 +16,8 @@ extension PatternInput {
         at index: Int,
         in row: inout Row,
         method: WorkingMethod,
-        autoTurningChain: Bool = true
+        autoTurningChain: Bool = true,
+        turningChainCounted: Bool? = nil
     ) -> (insertedTurningChain: Bool, stepIndex: Int) {
         var step = modifier.step(for: kind)
         if case .repeatGroup(let unit, .untilEnd) = step.kind, !canRepeatUntilEnd(unit: unit) {
@@ -24,14 +26,19 @@ extension PatternInput {
 
         var insertedTurningChain = false
         var position = min(max(index, 0), row.steps.count)
-        if autoTurningChain, method.usesTurningChain, kind != .chain,
-           !hasNonChainStitch(row), let chains = kind.defaultTurningChains {
-            row.steps.insert(.turningChain(chains), at: 0)
+        if let chains = turningChainToInsert(for: kind, in: row, method: method, autoTurningChain: autoTurningChain) {
+            row.steps.insert(.turningChain(chains, counted: turningChainCounted), at: 0)
             insertedTurningChain = true
             position += 1
         }
         row.steps.insert(step, at: position)
         return (insertedTurningChain, position)
+    }
+
+    /// この段に `kind` の目を入れると立ち上がりが自動で入るなら、その鎖の目数（ui-spec 5-6 U5）。入らなければ nil
+    public static func turningChainToInsert(for kind: StitchKind, in row: Row, method: WorkingMethod, autoTurningChain: Bool = true) -> Int? {
+        guard autoTurningChain, method.usesTurningChain, kind != .chain, !hasNonChainStitch(row) else { return nil }
+        return kind.defaultTurningChains
     }
 
     /// 段の `index` の位置に「飛ばす」を入れる

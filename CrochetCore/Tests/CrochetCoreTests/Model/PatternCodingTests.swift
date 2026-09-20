@@ -27,7 +27,7 @@ struct PatternCodingTests {
           "foundation": { "type": "magicRing" },
           "rows": [
             { "id": "00000000-0000-0000-0000-000000000001", "steps": [
-              { "id": "00000000-0000-0000-0000-000000000011", "type": "turningChain", "chains": 1 },
+              { "id": "00000000-0000-0000-0000-000000000011", "type": "turningChain", "chains": 1, "counted": false },
               { "id": "00000000-0000-0000-0000-000000000012", "type": "repeat", "count": 6, "unit": [
                 { "id": "00000000-0000-0000-0000-000000000013", "type": "stitch", "stitch": "singleCrochet", "into": "stitch" },
                 { "id": "00000000-0000-0000-0000-000000000014", "type": "increase", "stitch": "singleCrochet", "count": 2, "into": "stitch" }
@@ -75,6 +75,30 @@ struct PatternCodingTests {
         let written = try JSONSerialization.jsonObject(with: expected.jsonData()) as? NSDictionary
         let source = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? NSDictionary
         #expect(written == source)
+    }
+
+    @Test("古い JSON（立ち上がりに counted がない）は、鎖1目なら数えない・2目以上なら数えるとして読む")
+    func turningChainWithoutCounted() throws {
+        let json = """
+        {
+          "schemaVersion": 1, "method": "joinedRounds", "foundation": { "type": "magicRing" },
+          "rows": [
+            { "id": "00000000-0000-0000-0000-000000000001", "steps": [
+              { "id": "00000000-0000-0000-0000-000000000011", "type": "turningChain", "chains": 1 }
+            ]},
+            { "id": "00000000-0000-0000-0000-000000000002", "steps": [
+              { "id": "00000000-0000-0000-0000-000000000021", "type": "turningChain", "chains": 3 }
+            ]}
+          ]
+        }
+        """
+        let decoded = try Pattern(jsonData: Data(json.utf8))
+        #expect(decoded.rows[0].steps[0].kind == .turningChain(chains: 1, counted: false))
+        #expect(decoded.rows[1].steps[0].kind == .turningChain(chains: 3, counted: true))
+
+        // 書き戻すと counted が付く
+        let written = String(decoding: try decoded.jsonData(), as: UTF8.self)
+        #expect(written.contains(#""counted":false"#) && written.contains(#""counted":true"#))
     }
 
     @Test("鎖の作り目と往復編みの保存形式")

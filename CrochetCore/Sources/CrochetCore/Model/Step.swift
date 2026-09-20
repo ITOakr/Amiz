@@ -23,8 +23,9 @@ public enum RepeatCount: Hashable, Sendable {
 /// 画面のボタン1回＝1つの操作、を原則にする。鎖編みを3回押せば `.stitch(.chain)` が3つ並ぶ。
 /// 例外は「n目編み入れる」「n目一度」（先に選ぶボタン＋目ボタンで1操作）と、立ち上がり（鎖の目数を持つ）。
 public enum StepKind: Hashable, Sendable {
-    /// 立ち上がり。鎖編みとは別の操作として記録する（domain-spec 6）
-    case turningChain(chains: Int)
+    /// 立ち上がり。鎖編みとは別の操作として記録する（domain-spec 6）。
+    /// `counted` は「1目と数えるか」。標準は鎖1目なら数えず、2目以上なら数える（`StepKind.standardTurningChainCounted`）
+    case turningChain(chains: Int, counted: Bool)
     /// 普通の目1目。鎖編みもここに含む（鎖編みは前段を拾わない。domain-spec 4）
     case stitch(StitchKind, into: Placement = .stitch)
     /// n目編み入れる（増し目）。同じ編み入れ先に count 目編む（domain-spec 2）
@@ -41,6 +42,17 @@ public enum StepKind: Hashable, Sendable {
     /// 「残りすべてに細編み」は、単位が1つで回数が `.untilEnd` の繰り返しとして表す。
     /// 型の上では入れ子にできるが、使わない（検証で禁止する）
     case repeatGroup(unit: [Step], count: RepeatCount)
+
+    /// 立ち上がりを1目と数えるかの標準（domain-spec 6）：鎖1目なら数えない、2目以上なら数える。
+    /// 設定で「数える」「数えない」を選んだときは、この標準の代わりにその値を使う
+    public static func standardTurningChainCounted(chains: Int) -> Bool {
+        chains >= 2
+    }
+
+    /// 標準の数え方の立ち上がり（`counted` を省略した書き方）
+    public static func turningChain(chains: Int) -> StepKind {
+        .turningChain(chains: chains, counted: standardTurningChainCounted(chains: chains))
+    }
 }
 
 /// 手順の1操作。ID を持つ（tech-spec 5-3）。
@@ -61,9 +73,9 @@ public struct Step: Identifiable, Hashable, Sendable {
 // 新しい ID を付けた Step を作る。テストや入力処理から `.stitch(.singleCrochet)` のように書ける。
 
 extension Step {
-    /// 立ち上がり（鎖 `chains` 目）
-    public static func turningChain(_ chains: Int) -> Step {
-        Step(kind: .turningChain(chains: chains))
+    /// 立ち上がり（鎖 `chains` 目）。`counted` を省略すると標準（鎖1目は数えない、2目以上は数える）
+    public static func turningChain(_ chains: Int, counted: Bool? = nil) -> Step {
+        Step(kind: .turningChain(chains: chains, counted: counted ?? StepKind.standardTurningChainCounted(chains: chains)))
     }
 
     /// 普通の目1目
@@ -111,7 +123,7 @@ extension Step {
 // 操作の種類を "type" で見分ける平らな形にする。Swift の自動生成に任せると "_0" のような
 // 読めないキーになり、型名の変更で古いデータが読めなくなるため、自分で書く。
 //
-//   {"id":"…","type":"turningChain","chains":1}
+//   {"id":"…","type":"turningChain","chains":1,"counted":false}   （"counted" が無ければ鎖の目数で決める）
 //   {"id":"…","type":"stitch","stitch":"singleCrochet","into":"stitch"}
 //   {"id":"…","type":"increase","stitch":"singleCrochet","count":2,"into":"stitch"}
 //   {"id":"…","type":"decrease","stitch":"singleCrochet","count":2}
@@ -120,7 +132,7 @@ extension Step {
 
 extension Step: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, type, chains, stitch, count, into, unit
+        case id, type, chains, counted, stitch, count, into, unit
     }
 
     private enum TypeName: String, Codable {
@@ -135,7 +147,11 @@ extension Step: Codable {
 
         switch try container.decode(TypeName.self, forKey: .type) {
         case .turningChain:
-            kind = .turningChain(chains: try container.decode(Int.self, forKey: .chains))
+            let chains = try container.decode(Int.self, forKey: .chains)
+            kind = .turningChain(
+                chains: chains,
+                counted: try container.decodeIfPresent(Bool.self, forKey: .counted) ?? StepKind.standardTurningChainCounted(chains: chains)
+            )
         case .stitch:
             kind = .stitch(
                 try container.decode(StitchKind.self, forKey: .stitch),
@@ -173,9 +189,10 @@ extension Step: Codable {
         try container.encode(id, forKey: .id)
 
         switch kind {
-        case .turningChain(let chains):
+        case .turningChain(let chains, let counted):
             try container.encode(TypeName.turningChain, forKey: .type)
             try container.encode(chains, forKey: .chains)
+            try container.encode(counted, forKey: .counted)
         case .stitch(let stitchKind, let placement):
             try container.encode(TypeName.stitch, forKey: .type)
             try container.encode(stitchKind, forKey: .stitch)
