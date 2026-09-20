@@ -109,6 +109,18 @@ enum TestPatterns {
         ]))
     }
 
+    /// TC-10 花のモチーフ 3段目：TC-4 の段（長編み1目、鎖2目 ×12。合計36目）に続けて、
+    /// 「立ち上がり鎖1目、残りのアーチすべてに束に細編み3目編み入れる、引き抜き」
+    static func tc10() -> Pattern {
+        var pattern = tc4()
+        pattern.rows.append(Row(steps: [
+            .turningChain(1),
+            .untilEnd([.increase(.singleCrochet, count: 3, into: .chainSpace)]),
+            .closeRound(),
+        ]))
+        return pattern
+    }
+
     /// TC-6 割り切れない場合：前段13目に「（細編み1目、増し目）を段の終わりまで」
     static func tc6(leaveRemaining: Bool = false) -> Pattern {
         var steps: [Step] = [

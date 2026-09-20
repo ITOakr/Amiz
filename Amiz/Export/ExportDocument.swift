@@ -63,7 +63,8 @@ enum LegendItem: Hashable, Identifiable {
                     hasClosing = true
                 case .regular:
                     kinds.insert(stitch.kind)
-                    if stitch.picks.count > 1 { decreases.insert(stitch.kind) }
+                    // 前段を複数目まとめて拾うのは減らし目。束（アーチの鎖をまとめて拾う）は違う
+                    if stitch.picks.count > 1, stitch.into != .chainSpace { decreases.insert(stitch.kind) }
                 }
             }
             // 同じ根元を共有する目（増し目）

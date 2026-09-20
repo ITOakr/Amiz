@@ -8,12 +8,15 @@ public enum Expander {
     public static func expand(_ pattern: Pattern) -> PatternExpansion {
         var rows: [RowExpansion] = []
         var previousCount = initialPreviousCount(for: pattern.foundation)
+        // 前段の数える目が鎖かどうか（編んだ順）。束に編み入れるアーチの検出に使う。作り目の鎖は目として扱い、アーチにはしない
+        var previousIsChain: [Bool]? = previousCount.map { [Bool](repeating: false, count: $0) }
 
         let reversed = pattern.method.picksPreviousRowReversed
         for row in pattern.rows {
-            let expansion = expand(row: row, previousCount: previousCount, picksReversed: reversed)
+            let expansion = expand(row: row, previousCount: previousCount, picksReversed: reversed, previousIsChain: previousIsChain)
             rows.append(expansion)
             previousCount = expansion.totalCount
+            previousIsChain = expansion.stitches.filter(\.isCounted).map(\.isChainSpaceLink)
         }
 
         return PatternExpansion(rows: rows)
@@ -24,8 +27,14 @@ public enum Expander {
     ///   - row: 段
     ///   - previousCount: 前段の目数。わの作り目に編み入れる1段目は nil
     ///   - picksReversed: 前段を逆順に拾うか（往復編み）
-    public static func expand(row: Row, previousCount: Int?, picksReversed: Bool = false) -> RowExpansion {
-        var state = State(rowID: row.id, previousCount: previousCount, picksReversed: picksReversed)
+    ///   - previousIsChain: 前段の数える目が鎖かどうか（編んだ順。束に編み入れるアーチの検出に使う）。省略すると鎖はないものとする
+    public static func expand(
+        row: Row, previousCount: Int?, picksReversed: Bool = false, previousIsChain: [Bool]? = nil
+    ) -> RowExpansion {
+        var state = State(
+            rowID: row.id, previousCount: previousCount, picksReversed: picksReversed,
+            previousIsChain: previousIsChain ?? previousCount.map { [Bool](repeating: false, count: $0) }
+        )
         expand(steps: row.steps, repetition: 0, state: &state)
 
         return RowExpansion(
@@ -55,6 +64,8 @@ public enum Expander {
         let previousCount: Int?
         /// 前段を逆順に拾うか（往復編み）。前段の目数が決まらない段では順方向と同じ
         let picksReversed: Bool
+        /// 前段の数える目が鎖かどうか（編んだ順）。前段の目数が決まらない段では nil
+        let previousIsChain: [Bool]?
         /// 前段から拾った数（拾う順のカーソル）
         var cursor = 0
         var stitches: [ExpandedStitch] = []
@@ -62,10 +73,44 @@ public enum Expander {
         var repeatCounts: [UUID: Int] = [:]
         var issues: [RowExpansion.Issue] = []
 
-        init(rowID: UUID, previousCount: Int?, picksReversed: Bool = false) {
+        init(rowID: UUID, previousCount: Int?, picksReversed: Bool = false, previousIsChain: [Bool]? = nil) {
             self.rowID = rowID
             self.previousCount = previousCount
             self.picksReversed = picksReversed
+            self.previousIsChain = previousIsChain
+        }
+
+        /// 拾う順での位置を、前段の編んだ順の番号にする
+        private func creationIndex(atPickPosition position: Int) -> Int {
+            if picksReversed, let previousCount { previousCount - 1 - position } else { position }
+        }
+
+        /// 束に編み入れる：次の鎖のアーチ（連続する鎖のまとまり）まで進み、その鎖をまとめて拾う（domain-spec 21）。
+        /// 間の鎖でない目は飛ばした扱いになる。アーチが残っていなければ nil（カーソルは動かさない）
+        mutating func pickChainSpace() -> Range<Int>? {
+            guard let previousCount, let isChain = previousIsChain else { return nil }
+            var position = cursor
+            while position < previousCount, !isChain[creationIndex(atPickPosition: position)] {
+                position += 1
+            }
+            guard position < previousCount else { return nil }
+            let start = position
+            while position < previousCount, isChain[creationIndex(atPickPosition: position)] {
+                position += 1
+            }
+            cursor = position
+            let first = creationIndex(atPickPosition: start)
+            let last = creationIndex(atPickPosition: position - 1)
+            return min(first, last)..<(max(first, last) + 1)
+        }
+
+        /// 編み入れ先に応じて前段を拾う。束なら次のアーチ、そうでなければ1目（前段を拾わない目は 0）
+        mutating func pick(for kind: StitchKind, into placement: Placement, step: Step) -> Range<Int> {
+            guard kind.takesPreviousStitch else { return pick(0) }
+            guard placement == .chainSpace else { return pick(1) }
+            if let arch = pickChainSpace() { return arch }
+            issues.append(.noChainSpaceAhead(stepID: step.id))
+            return pick(0)
         }
 
         /// 前段の目を count 目拾い、カーソルを進める。返すのは前段の編んだ順での番号。
@@ -110,13 +155,13 @@ public enum Expander {
                 ref: state.ref(step, repetition: repetition),
                 kind: kind,
                 into: into,
-                picks: state.pick(kind.takesPreviousStitch ? 1 : 0),
+                picks: state.pick(for: kind, into: into, step: step),
                 isCounted: true
             ))
 
         case .increase(let kind, let count, let into):
             // 同じ編み入れ先に count 目編む（domain-spec 2）
-            let picks = state.pick(kind.takesPreviousStitch ? 1 : 0)
+            let picks = state.pick(for: kind, into: into, step: step)
             for ordinal in 0..<count {
                 state.stitches.append(ExpandedStitch(
                     ref: state.ref(step, repetition: repetition, ordinal: ordinal),
@@ -168,9 +213,9 @@ public enum Expander {
             return max(0, times)
 
         case .untilEnd:
-            // 単位を最後まで編める回数だけ繰り返す。余った前段の目は拾わずに残す
-            let unitPicks = picksPerIteration(of: unit)
-            guard unitPicks > 0 else {
+            // 単位がまだ収まる間だけ繰り返す（余った前段の目は拾わずに残す）。
+            // 拾う数が一定の単位なら「残り ÷ 1回の拾う数」と同じ。束を含む単位は拾う数が一定でないので、試しに展開して確かめる
+            guard picksPerIteration(of: unit) > 0 else {
                 state.issues.append(.untilEndUnitPicksNothing(stepID: step.id))
                 return 0
             }
@@ -178,12 +223,22 @@ public enum Expander {
                 state.issues.append(.untilEndWithoutPreviousCount(stepID: step.id))
                 return 0
             }
-            let remaining = max(0, previousCount - state.cursor)
-            return remaining / unitPicks
+            var times = 0
+            var trial = state
+            while times < previousCount {
+                var probe = trial
+                let cursorBefore = probe.cursor
+                expand(steps: unit, repetition: times, state: &probe)
+                // 前段を拾いすぎず、前に進み、問題（アーチがない等）が増えなければ、この1回は収まる
+                guard probe.cursor <= previousCount, probe.cursor > cursorBefore, probe.issues.count == trial.issues.count else { break }
+                trial = probe
+                times += 1
+            }
+            return times
         }
     }
 
-    /// 単位を1回編むと前段を何目拾うか（domain-spec 21 の表）
+    /// 単位を1回編むと前段を何目拾うか（domain-spec 21 の表）。束に編み入れる目はアーチの大きさで変わるので 1 と見なす
     static func picksPerIteration(of steps: [Step]) -> Int {
         steps.reduce(0) { total, step in
             switch step.kind {

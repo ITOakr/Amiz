@@ -47,4 +47,9 @@ public struct ExpandedStitch: Hashable, Sendable {
     public var isExcludedFromNonChainCount: Bool {
         role == .regular && kind == .chain
     }
+
+    /// 次の段から見て「鎖のアーチ」の一部になる目か（普通の鎖編みだけ。数える立ち上がりは目の代わりなので含めない。domain-spec 21）
+    public var isChainSpaceLink: Bool {
+        isCounted && role == .regular && kind == .chain
+    }
 }

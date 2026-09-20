@@ -8,6 +8,8 @@ public struct RowExpansion: Hashable, Sendable {
         case untilEndUnitPicksNothing(stepID: UUID)
         /// 前段の目数が決まらない段（わの作り目の1段目）で「段の終わりまで」が使われている
         case untilEndWithoutPreviousCount(stepID: UUID)
+        /// 束に編み入れようとしたが、前段の残りに鎖のアーチがない（domain-spec 21）
+        case noChainSpaceAhead(stepID: UUID)
     }
 
     /// 段の ID
