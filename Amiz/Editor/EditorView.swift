@@ -244,6 +244,7 @@ struct EditorView: View {
             highlighted: model.nextStitchToPick,
             selected: model.selectedStitch,
             showsRowNumbers: showsRowNumbers,
+            showsSeamMarks: model.pattern.method == .spiral,
             onTapStitch: { model.select($0.ref) }
         )
         .overlay(alignment: .topLeading) {
