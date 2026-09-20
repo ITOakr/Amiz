@@ -1,0 +1,64 @@
+import Testing
+import CrochetCore
+@testable import Amiz
+
+@Suite("書き出し用のページ（ExportDocument）")
+struct ExportDocumentTests {
+    @Test("凡例は図で使った記号だけ：くまの頭は 細編み・立ち上がり・引き抜き・細編みの増し目")
+    func legendForBearHead() {
+        let document = ExportDocument(title: "くまの頭", pattern: SamplePatterns.bearHead, options: ExportOptions())
+        #expect(document.legendItems == [.stitch(.singleCrochet), .turningChain, .closingSlipStitch, .increase(.singleCrochet)])
+    }
+
+    @Test("凡例：長編みと鎖のモチーフ、減らし目のある作品")
+    func legendForOthers() {
+        let motif = ExportDocument(title: "花", pattern: SamplePatterns.flowerMotif, options: ExportOptions())
+        #expect(motif.legendItems == [.stitch(.chain), .stitch(.doubleCrochet), .turningChain, .closingSlipStitch])
+
+        var pattern = SamplePatterns.bearHead
+        pattern.rows[4] = Row(steps: [.turningChain(1), .untilEnd([.decrease(.singleCrochet)]), .closeRound()])
+        let decreasing = ExportDocument(title: "減らし", pattern: pattern, options: ExportOptions())
+        #expect(decreasing.legendItems.contains(.decrease(.singleCrochet)))
+    }
+
+    @Test("ページ：くまの頭は表紙＋目数表1ページ。60段なら目数表が複数ページ。含める内容で変わる")
+    func pages() {
+        let bear = ExportDocument(title: "くまの頭", pattern: SamplePatterns.bearHead, options: ExportOptions())
+        #expect(bear.pages.map(\.id) == ["cover", "table.0"])
+        // 入力中の5段目（4目）は目数表に含める（空ではないため）
+        if case .table(let rows, _) = bear.pages[1] {
+            #expect(rows.count == 5)
+        } else {
+            Issue.record("2ページ目は目数表のはず")
+        }
+
+        // 60段（毎段増し目なので同じ内容の段はまとまらない）→ 28行ずつで3ページ
+        let big = ExportDocument(title: "大", pattern: SamplePatterns.largeDisc(rows: 60), options: ExportOptions())
+        #expect(big.pages.count == 1 + 3)
+
+        var tableOnly = ExportOptions()
+        tableOnly.includesChart = false
+        tableOnly.includesLegend = false
+        #expect(ExportDocument(title: "", pattern: SamplePatterns.bearHead, options: tableOnly).pages.map(\.id) == ["table.0"])
+
+        var chartOnly = ExportOptions()
+        chartOnly.includesTable = false
+        #expect(ExportDocument(title: "", pattern: SamplePatterns.bearHead, options: chartOnly).pages.map(\.id) == ["cover"])
+    }
+
+    @Test("末尾の空の段は目数表に含めず、警告の対象にもしない")
+    func trailingEmptyRow() {
+        var pattern = SamplePatterns.bearHead
+        pattern.rows[4] = Row(steps: [.turningChain(1), .untilEnd([.stitch(.singleCrochet)]), .closeRound()])
+        pattern.rows.append(Row())
+        let document = ExportDocument(title: "", pattern: pattern, options: ExportOptions())
+        #expect(document.tableRows.count == 5)
+        #expect(document.warnings.isEmpty)
+    }
+
+    @Test("入力途中の最後の段が空でなければ、書き出しでは警告の対象になる（7-3 の確認が出る）")
+    func unfinishedLastRowWarns() {
+        let document = ExportDocument(title: "", pattern: SamplePatterns.bearHead, options: ExportOptions())
+        #expect(document.warnings.map(\.rowNumber) == [5])
+    }
+}

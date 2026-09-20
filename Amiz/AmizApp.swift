@@ -27,6 +27,9 @@ struct AmizApp: App {
             case "big":
                 // 性能確認：40段・約4900目
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.largeDisc(rows: 40)), title: "大きな円") }
+            case "export":
+                // 書き出し用のページの確認
+                ExportPreviewView(document: ExportDocument(title: "くまの頭", pattern: SamplePatterns.bearHead, options: ExportOptions()))
             default:
                 HomeView()
             }
