@@ -272,6 +272,8 @@ struct EditorView: View {
             selected: model.selectedStitch,
             showsRowNumbers: showsRowNumbers,
             showsSeamMarks: model.pattern.method == .spiral,
+            pattern: model.displayedPattern,
+            yarnChanges: model.yarnChanges,
             onTapStitch: { stitch in
                 if model.isColorEditing { model.paintStitch(stitch.ref) } else { model.select(stitch.ref) }
             },

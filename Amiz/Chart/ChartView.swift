@@ -16,6 +16,9 @@ struct ChartView: View {
     var showsRowNumbers = true
     /// 段の境目に区切り線を描く（螺旋編み。立ち上がりも引き抜きもないので境目が分かるように）
     var showsSeamMarks = false
+    /// 糸の色で描くための編み図と色替えの位置（domain-spec 30・31）。nil なら単色
+    var pattern: Pattern?
+    var yarnChanges: [YarnChange] = []
     /// 目をタップしたとき（選択の操作はフェーズ4）
     var onTapStitch: ((LaidOutStitch) -> Void)?
     /// なぞって塗る（色編集モード。ui-spec U21）。指定するとドラッグが移動ではなく塗りになる。
@@ -63,6 +66,8 @@ struct ChartView: View {
         painter.selected = selected
         painter.showsRowNumbers = showsRowNumbers
         painter.showsSeamMarks = showsSeamMarks
+        painter.pattern = pattern
+        painter.yarnChanges = yarnChanges
         painter.draw(in: &context)
     }
 
@@ -174,6 +179,15 @@ struct ChartPainter {
     var showsRowNumbers = true
     /// 段の境目の区切り線（螺旋編み）。段番号の下に薄く描く
     var showsSeamMarks = false
+    /// 糸の色で描くための編み図（糸リストを引く）。nil か糸が1本だけなら単色（今編んでいる段はアクセント色）
+    var pattern: Pattern?
+    /// 色替えの位置（domain-spec 31）。直前の目の頭に新しい色の三角を描く
+    var yarnChanges: [YarnChange] = []
+
+    /// 糸の色で描くか（糸が2本以上の作品）
+    private var usesYarnColors: Bool {
+        (pattern?.yarns.count ?? 0) > 1
+    }
 
     func draw(in context: inout GraphicsContext) {
         let style = StitchSymbol.Style(unit: transform.unit, lineWidth: max(1, min(2, transform.unit * 0.11)))
@@ -216,20 +230,62 @@ struct ChartPainter {
             }
         }
 
-        // 目。次に拾う前段の目は記号そのものを太い赤で描く（ハイライト）
+        // 目。次に拾う前段の目は記号そのものを太い赤で描く（ハイライト）。
+        // 糸が2本以上なら記号の線を糸の色で描き（domain-spec 30）、今編んでいる段はアクセント色の縁取りで区別する
         let highlightStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 2.2)
+        let outlineStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 1.7)
+        let haloStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 3.2)
         for stitch in layout.stitches {
             let scaled = transform.apply(to: stitch)
             if let highlighted, stitch.ref == highlighted.ref {
                 StitchSymbol.draw(scaled, in: &context, color: .red, style: highlightStyle)
             } else if let selected, stitch.ref == selected.ref {
                 StitchSymbol.draw(scaled, in: &context, color: .orange, style: highlightStyle)
+            } else if usesYarnColors, let pattern {
+                let isCurrent = stitch.rowIndex == currentRowIndex
+                let yarnColor = pattern.yarn(for: stitch.yarnID).color
+                if isCurrent {
+                    StitchSymbol.draw(scaled, in: &context, color: .accentColor.opacity(0.35), style: haloStyle)
+                }
+                // 白など明るい色は暗い輪郭を下に敷いて見分ける（domain-spec 30）
+                if yarnColor.isLight {
+                    StitchSymbol.draw(scaled, in: &context, color: .primary.opacity(0.45), style: outlineStyle)
+                }
+                StitchSymbol.draw(scaled, in: &context, color: Color(yarnColor), style: style)
             } else {
                 let isCurrent = stitch.rowIndex == currentRowIndex
                 StitchSymbol.draw(scaled, in: &context, color: isCurrent ? .accentColor : .primary, style: style)
             }
         }
 
+        // 色替えの位置：持ち替える目（直前の目）の頭の先に、新しい糸の色の小さな三角（domain-spec 31）
+        if usesYarnColors, let pattern {
+            for change in yarnChanges {
+                guard let previousRef = change.previousRef, let previous = layout.stitch(for: previousRef) else { continue }
+                let color = pattern.yarn(for: change.yarnID).color
+                drawChangeMarker(at: transform.apply(to: previous), color: color, in: &context, style: style)
+            }
+        }
+
+        drawRowNumbers(in: &context, style: style)
+    }
+
+    /// 色替えの三角：頭の先（記号の向きに少し進んだ位置）に、頭の方を向いた小さな三角。明るい色は輪郭付き
+    private func drawChangeMarker(at stitch: LaidOutStitch, color: YarnColor, in context: inout GraphicsContext, style: StitchSymbol.Style) {
+        let size = style.unit * 0.22
+        let (dx, dy) = (cos(stitch.angle), sin(stitch.angle))
+        let tip = CGPoint(x: stitch.head.x + dx * size * 0.6, y: stitch.head.y + dy * size * 0.6)
+        let base = CGPoint(x: tip.x + dx * size * 1.5, y: tip.y + dy * size * 1.5)
+        var path = Path()
+        path.move(to: tip)
+        path.addLine(to: CGPoint(x: base.x - dy * size, y: base.y + dx * size))
+        path.addLine(to: CGPoint(x: base.x + dy * size, y: base.y - dx * size))
+        path.closeSubpath()
+        context.fill(path, with: .color(Color(color)))
+        context.stroke(path, with: .color(.primary.opacity(color.isLight ? 0.7 : 0.35)), lineWidth: max(0.5, style.lineWidth * 0.5))
+    }
+
+    private func drawRowNumbers(in context: inout GraphicsContext, style: StitchSymbol.Style) {
         // 段番号と方向の矢印（平面図）：立ち上がり側の外に置く（domain-spec 9）
         if showsRowNumbers {
             for band in layout.bands {

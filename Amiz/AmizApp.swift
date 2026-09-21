@@ -22,6 +22,8 @@ struct AmizApp: App {
                 NavigationStack { StitchSymbolCatalogView() }
             case "sample":
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.bearHead), title: "くまの頭") }
+            case "colored":
+                NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.bearHeadColored), title: "くまの頭（色付き）") }
             case "motif":
                 NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif), title: "花のモチーフ") }
             case "blanket":

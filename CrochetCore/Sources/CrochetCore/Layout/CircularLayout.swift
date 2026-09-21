@@ -263,7 +263,7 @@ public enum CircularLayout {
             ref: stitch.ref, kind: stitch.kind, role: stitch.role, into: stitch.into, isCounted: stitch.isCounted,
             rowIndex: rowIndex, countedIndex: countedIndex, head: head, bases: bases, sharedBaseCount: sharedBaseCount,
             angle: direction, height: drawHeight(of: stitch, options: options),
-            polarAngle: headAngle, polarRadius: outerRadius
+            polarAngle: headAngle, polarRadius: outerRadius, yarnID: stitch.yarnID
         )
     }
 

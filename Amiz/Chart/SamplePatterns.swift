@@ -16,6 +16,22 @@ enum SamplePatterns {
         ])
     }
 
+    /// 「くまの頭（色付き）」：TC-11。糸は生成り・こげ茶・白。2段目がこげ茶、3段目の3回目の増し目（鼻）がこげ茶、4段目が白
+    static var bearHeadColored: Pattern {
+        let ivory = Yarn(name: "生成り", color: YarnColor(hex: "#EDE3D1")!)
+        let brown = Yarn(name: "こげ茶", color: YarnColor(hex: "#5A3A22")!, memo: "品番 12")
+        let white = Yarn(name: "白", color: YarnColor(hex: "#FFFFFF")!)
+        var pattern = bearHead
+        pattern.yarns = [ivory, brown, white]
+        PatternInput.setYarn(brown.id, forRowAt: 1, in: &pattern)
+        if case .repeatGroup(let unit, _) = pattern.rows[2].steps[1].kind {
+            PatternInput.setYarn(brown.id, at: StitchRef(rowID: pattern.rows[2].id, stepID: unit[1].id, repetition: 2), in: &pattern)
+        }
+        PatternInput.setYarn(white.id, forRowAt: 3, in: &pattern)
+        pattern.currentYarnID = white.id
+        return pattern
+    }
+
     /// 「花のモチーフ」：1段目は長編み12目、2段目は長編みと鎖2目の繰り返し（TC-4 と同じ内容）
     static var flowerMotif: Pattern {
         func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {
