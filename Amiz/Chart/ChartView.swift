@@ -19,6 +19,7 @@ struct ChartView: View {
     /// 糸の色で描くための編み図と色替えの位置（domain-spec 30・31）。nil なら単色
     var pattern: Pattern?
     var yarnChanges: [YarnChange] = []
+    @Environment(\.colorScheme) private var colorScheme
     /// 目をタップしたとき（選択の操作はフェーズ4）
     var onTapStitch: ((LaidOutStitch) -> Void)?
     /// なぞって塗る（色編集モード。ui-spec U21）。指定するとドラッグが移動ではなく塗りになる。
@@ -68,6 +69,7 @@ struct ChartView: View {
         painter.showsSeamMarks = showsSeamMarks
         painter.pattern = pattern
         painter.yarnChanges = yarnChanges
+        painter.isDarkBackground = colorScheme == .dark
         painter.draw(in: &context)
     }
 
@@ -183,6 +185,8 @@ struct ChartPainter {
     var pattern: Pattern?
     /// 色替えの位置（domain-spec 31）。直前の目の頭に新しい色の三角を描く
     var yarnChanges: [YarnChange] = []
+    /// 背景が暗いか（ダークモード）。暗い糸に輪郭を付ける判定に使う。書き出しは白地なので false
+    var isDarkBackground = false
 
     /// 糸の色で描くか（糸が2本以上の作品）
     private var usesYarnColors: Bool {
@@ -247,8 +251,8 @@ struct ChartPainter {
                 if isCurrent {
                     StitchSymbol.draw(scaled, in: &context, color: AppTheme.accent.opacity(0.35), style: haloStyle)
                 }
-                // 白など明るい色は暗い輪郭を下に敷いて見分ける（domain-spec 30）
-                if yarnColor.isLight {
+                // 背景に近い色（白地なら明るい色、ダークモードなら暗い色）は輪郭を下に敷いて見分ける（domain-spec 30）
+                if isDarkBackground ? yarnColor.isDark : yarnColor.isLight {
                     StitchSymbol.draw(scaled, in: &context, color: AppTheme.ink.opacity(0.45), style: outlineStyle)
                 }
                 StitchSymbol.draw(scaled, in: &context, color: Color(yarnColor), style: style)
@@ -282,7 +286,8 @@ struct ChartPainter {
         path.addLine(to: CGPoint(x: base.x + dy * size, y: base.y - dx * size))
         path.closeSubpath()
         context.fill(path, with: .color(Color(color)))
-        context.stroke(path, with: .color(AppTheme.ink.opacity(color.isLight ? 0.7 : 0.35)), lineWidth: max(0.5, style.lineWidth * 0.5))
+        let needsOutline = isDarkBackground ? color.isDark : color.isLight
+        context.stroke(path, with: .color(AppTheme.ink.opacity(needsOutline ? 0.7 : 0.35)), lineWidth: max(0.5, style.lineWidth * 0.5))
     }
 
     private func drawRowNumbers(in context: inout GraphicsContext, style: StitchSymbol.Style) {

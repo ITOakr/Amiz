@@ -39,6 +39,11 @@ public struct YarnColor: Hashable, Sendable, Codable {
         luminance > 0.8
     }
 
+    /// 暗い背景（ダークモード）と見分けにくい暗い色か（輪郭を付ける対象）
+    public var isDark: Bool {
+        luminance < 0.25
+    }
+
     public init(from decoder: Decoder) throws {
         let text = try decoder.singleValueContainer().decode(String.self)
         guard let color = YarnColor(hex: text) else {
