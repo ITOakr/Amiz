@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import CrochetCore
 
-/// 立ち上がりを1目と数えるかを立ち上がりごとに持つ（domain-spec 6）
+/// 立ち上がりを1目と数えるかを立ち上がりごとに持つ（domain-spec 6、TC-12）
 @Suite("立ち上がりを数えるかどうか")
 struct TurningChainCountingTests {
     /// 前段12目の作品に、指定した立ち上がりの段を足す

@@ -25,7 +25,7 @@
 | 最低対応OS | iOS 26.0 / iPadOS 26.0 以上（Xcode の初期値の 26.5 ではなく 26.0 に設定する。新しい API を使ったときに気づけるようにするため） |
 | 端末 | iPhone（縦向きのみ）、iPad（縦横両対応） |
 | アプリの構成 | iPhone・iPad 共通の1つのアプリ（ユニバーサルアプリ） |
-| 言語 | 日本語のみ。プロジェクトの開発言語（development language）は ja にする。画面の文字列は String Catalog にまとめ、将来の多言語化に備える |
+| 言語 | 日本語のみ。プロジェクトの開発言語（development language）は ja にする。画面の文字列は String Catalog（`Amiz/Localizable.xcstrings`）にまとめ、将来の多言語化に備える。`xcodebuild` では自動同期されないので `scripts/sync-string-catalog.py` で抽出結果を取り込む。目数表の文章など CrochetCore の日本語はカタログの対象外（多言語化のときに見直す） |
 
 **最低対応OSの理由**：iOS 27（2026年9月公開）は iOS 26 と対応機種が同じため、iOS 26 以上にしても対象から外れる機種はない。一方で、1世代前まで対応しておけば、まだ iOS 27 に更新していない端末でも使える。
 
