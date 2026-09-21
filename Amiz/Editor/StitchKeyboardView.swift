@@ -17,7 +17,7 @@ struct StitchKeyboardView: View {
     @State private var remainingToConfirm: Int?
 
     var body: some View {
-        VStack(spacing: isLarge ? 12 : 8) {
+        VStack(spacing: isLarge ? 12 : 10) {
             stitchGroup
             modifierGroup
             rowOperationGroup
@@ -26,7 +26,6 @@ struct StitchKeyboardView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(AppTheme.surface)
-        .buttonBorderShape(.roundedRectangle(radius: AppTheme.buttonRadius))
         .alert("繰り返し", isPresented: $isRepeatEndPresented) {
             TextField("回数", text: $repeatCountText)
                 .keyboardType(.numberPad)
@@ -77,7 +76,7 @@ struct StitchKeyboardView: View {
     // MARK: - グループ1：目ボタン
 
     private var stitchGroup: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
             ForEach(StitchKind.allCases, id: \.self) { kind in
                 Button {
                     model.pressStitch(kind)
@@ -89,8 +88,7 @@ struct StitchKeyboardView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: isLarge ? 96 : 64)
                 }
-                .buttonStyle(.bordered)
-                .tint(.primary)
+                .buttonStyle(.soft)
                 .accessibilityIdentifier("stitch.\(kind.rawValue)")
             }
         }
@@ -99,7 +97,7 @@ struct StitchKeyboardView: View {
     // MARK: - グループ2：先に選ぶボタン
 
     private var modifierGroup: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             ModifierButton(title: increaseTitle, isSelected: isIncreaseSelected) {
                 model.toggleIncrease()
             }
@@ -143,7 +141,7 @@ struct StitchKeyboardView: View {
     // MARK: - グループ3：段の操作
 
     private var rowOperationGroup: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             OperationButton(title: "繰り返し開始") {
                 model.pressBeginRepeat()
             }
@@ -176,8 +174,7 @@ struct StitchKeyboardView: View {
             } label: {
                 OperationLabel(title: "立ち上がり")
             }
-            .buttonStyle(.bordered)
-            .tint(.primary)
+            .buttonStyle(.soft)
             .disabled(!model.pattern.method.usesTurningChain)
             .accessibilityIdentifier("op.turningChain")
         }
@@ -209,9 +206,7 @@ private struct ModifierButton: View {
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity, minHeight: height)
         }
-        .buttonStyle(.bordered)
-        .tint(isSelected ? AppTheme.accent : .primary)
-        .background(isSelected ? AppTheme.accent.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: AppTheme.buttonRadius))
+        .buttonStyle(.soft(selected: isSelected))
     }
 }
 
@@ -224,8 +219,7 @@ private struct OperationButton: View {
         Button(action: action) {
             OperationLabel(title: title)
         }
-        .buttonStyle(.bordered)
-        .tint(.primary)
+        .buttonStyle(.soft)
     }
 }
 

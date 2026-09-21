@@ -18,6 +18,7 @@ struct YarnPaletteView: View {
                 Spacer()
                 Button("完了") { model.endColorEditing() }
                     .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.roundedRectangle(radius: AppTheme.chipRadius))
                     .tint(AppTheme.colorMode)
                     .accessibilityIdentifier("palette.done")
             }

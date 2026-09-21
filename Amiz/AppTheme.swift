@@ -34,3 +34,35 @@ enum AppTheme {
     /// 浮かせる面の影
     static let shadow = Color.black.opacity(0.07)
 }
+
+/// 編み目キーボードのボタンの見た目（ui-spec 1章「柔らかい印象」）：白い面に薄い影、押すと少し沈む。
+/// 選択中はアクセントの薄い面、無効は面を地に近づけて文字を薄く
+struct SoftButtonStyle: ButtonStyle {
+    var isSelected = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isEnabled ? (isSelected ? AppTheme.accent : AppTheme.ink) : AppTheme.ink.opacity(0.3))
+            .background(fill, in: RoundedRectangle(cornerRadius: AppTheme.buttonRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.buttonRadius)
+                    .stroke(isSelected ? AppTheme.accent.opacity(0.6) : AppTheme.hairline, lineWidth: isSelected ? 1.5 : 1)
+            )
+            .shadow(color: isEnabled ? AppTheme.shadow : .clear, radius: 4, y: 2)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+
+    private var fill: Color {
+        if !isEnabled { return AppTheme.surface }
+        return isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.card
+    }
+}
+
+extension ButtonStyle where Self == SoftButtonStyle {
+    /// `.buttonStyle(.soft)` / `.buttonStyle(.soft(selected: true))`
+    static var soft: SoftButtonStyle { SoftButtonStyle() }
+    static func soft(selected: Bool) -> SoftButtonStyle { SoftButtonStyle(isSelected: selected) }
+}
