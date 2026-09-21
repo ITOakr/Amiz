@@ -25,6 +25,8 @@ struct EditorView: View {
     @State private var tab: Tab = .chart
     /// 書き出しシート（ui-spec 6-2）
     @State private var showsExportSheet = false
+    /// 糸リスト（ui-spec 6-1）
+    @State private var showsYarnList = false
     /// 書き出し前の確認の文（ui-spec 7-3）。nil なら確認を出していない
     @State private var exportConfirmationMessage: String?
 
@@ -73,6 +75,9 @@ struct EditorView: View {
         }
         .sheet(isPresented: $showsExportSheet) {
             ExportSheet(title: title, pattern: model.pattern)
+        }
+        .sheet(isPresented: $showsYarnList) {
+            YarnListSheet(model: model)
         }
         .onChange(of: autoTurningChain, initial: true) { _, isOn in
             model.autoTurningChain = isOn
@@ -206,7 +211,19 @@ struct EditorView: View {
                 Text("\(model.pattern.method.japaneseName)・\(model.pattern.foundation.japaneseName)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
+        }
+        ToolbarItem(placement: .topBarLeading) {
+            // 今持っている糸（U17）。タップで糸リストを開いて持ち替える。戻るボタンの隣（右側は元に戻す等で混むため）
+            Button {
+                showsYarnList = true
+            } label: {
+                YarnSwatch(color: model.currentYarn.color, size: 22)
+            }
+            .accessibilityLabel("今持っている糸：\(model.currentYarn.name)")
+            .accessibilityIdentifier("toolbar.yarn")
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
             Button("元に戻す", systemImage: "arrow.uturn.backward") { model.undo() }

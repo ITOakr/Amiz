@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 import CrochetCore
 
@@ -98,6 +99,11 @@ final class EditorModel {
     private var redoStack: [Pattern] = []
 
     init(pattern: Pattern) {
+        var pattern = pattern
+        // 糸リストのない作品（色に対応する前のデータ）には既定の糸を1本入れる（domain-spec 27・29）
+        if pattern.yarns.isEmpty {
+            pattern.yarns = [Yarn.fallback]
+        }
         self.pattern = pattern
         let expansion = pattern.expanded()
         self.expansion = expansion
@@ -142,6 +148,36 @@ final class EditorModel {
     /// 目数の警告。入力中の段は対象外（domain-spec 23）
     var warnings: [RowWarning] {
         expansion.warnings(excludingRowAt: currentRowIndex)
+    }
+
+    // MARK: - 糸（ui-spec U17・6-1）
+
+    var yarns: [Yarn] { pattern.yarns }
+
+    /// 今持っている糸
+    var currentYarn: Yarn { pattern.currentYarn }
+
+    /// 糸を持ち替える（U17）。これから編む目はこの糸になる
+    func changeYarn(to yarnID: UUID) {
+        mutate { PatternInput.changeYarn(to: yarnID, in: &$0) }
+    }
+
+    func addYarn(_ yarn: Yarn) {
+        mutate { PatternInput.addYarn(yarn, to: &$0) }
+    }
+
+    func updateYarn(_ yarn: Yarn) {
+        mutate { PatternInput.updateYarn(yarn, in: &$0) }
+    }
+
+    func moveYarns(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard let first = source.first else { return }
+        mutate { PatternInput.moveYarn(from: first, to: destination, in: &$0) }
+    }
+
+    /// 糸を削除する。その糸で編んだ目は既定の糸に戻る。最後の1本は消せない
+    func deleteYarn(id: UUID) {
+        mutate { PatternInput.deleteYarn(id: id, from: &$0) }
     }
 
     var canUndo: Bool { !undoStack.isEmpty }

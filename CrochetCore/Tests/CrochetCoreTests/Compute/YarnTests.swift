@@ -214,3 +214,60 @@ private extension PatternInput {
         }
     }
 }
+
+/// 糸リストの編集（domain-spec 29、ui-spec 6-1）
+@Suite("糸リストの編集")
+struct YarnEditingTests {
+    private let ivory = Yarn(name: "生成り", color: YarnColor(hex: "#EDE3D1")!)
+    private let brown = Yarn(name: "こげ茶", color: YarnColor(hex: "#5A3A22")!)
+    private let pink = Yarn(name: "ピンク", color: YarnColor(hex: "#F4A6B8")!)
+
+    @Test("追加・変更・並べ替え：先頭が既定の糸")
+    func addUpdateMove() {
+        var pattern = Pattern(method: .joinedRounds, foundation: .magicRing, yarns: [ivory])
+        #expect(PatternInput.addYarn(brown, to: &pattern))
+        #expect(PatternInput.addYarn(brown, to: &pattern) == false)
+        #expect(pattern.yarns.map(\.name) == ["生成り", "こげ茶"])
+
+        var renamed = brown
+        renamed.name = "チョコ"
+        renamed.memo = "品番 12"
+        #expect(PatternInput.updateYarn(renamed, in: &pattern))
+        #expect(pattern.yarns[1].name == "チョコ" && pattern.yarns[1].memo == "品番 12")
+        #expect(PatternInput.updateYarn(pink, in: &pattern) == false)
+
+        #expect(PatternInput.moveYarn(from: 1, to: 0, in: &pattern))
+        #expect(pattern.yarns.map(\.id) == [brown.id, ivory.id])
+        #expect(pattern.defaultYarn.id == brown.id)
+        #expect(PatternInput.moveYarn(from: 0, to: 2, in: &pattern))
+        #expect(pattern.yarns.map(\.id) == [ivory.id, brown.id])
+    }
+
+    @Test("削除：その糸で編んだ目は既定の糸に戻り、今持っている糸なら既定の糸を持つ。最後の1本は消せない")
+    func delete() {
+        var pattern = Pattern(method: .joinedRounds, foundation: .magicRing, yarns: [ivory, brown, pink])
+        PatternInput.changeYarn(to: brown.id, in: &pattern)
+        for _ in 0..<3 { PatternInput.addStitch(.singleCrochet, to: &pattern) }
+        var modifier = StitchModifier.none
+        modifier.toggleUntilEnd()
+        PatternInput.changeYarn(to: pink.id, in: &pattern)
+        PatternInput.addStitch(.singleCrochet, modifier: modifier, to: &pattern)
+
+        #expect(PatternInput.deleteYarn(id: brown.id, from: &pattern))
+        #expect(pattern.yarns.map(\.id) == [ivory.id, pink.id])
+        #expect(pattern.rows[0].steps.prefix(4).allSatisfy { $0.yarnID == nil })
+        // ピンクの目（繰り返しの単位の中）はそのまま
+        if case .repeatGroup(let unit, _) = pattern.rows[0].steps.last?.kind {
+            #expect(unit.map(\.yarnID) == [pink.id])
+        }
+        #expect(pattern.currentYarnID == pink.id)
+
+        #expect(PatternInput.deleteYarn(id: pink.id, from: &pattern))
+        #expect(pattern.currentYarnID == nil)
+        if case .repeatGroup(let unit, _) = pattern.rows[0].steps.last?.kind {
+            #expect(unit.map(\.yarnID) == [nil])
+        }
+        #expect(PatternInput.deleteYarn(id: ivory.id, from: &pattern) == false)
+        #expect(pattern.yarns.count == 1)
+    }
+}
