@@ -45,7 +45,7 @@
 
 `xcodebuild` の出力は長いので、結果だけ見るときは `| grep -E "SUCCEEDED|FAILED|error:"` を付ける。iPad で確認するときは `name=iPad Pro 11-inch (M5)` にする（iPad の配置の UI テスト `IPadLayoutUITests` は iPad でだけ動き、iPhone では飛ばされる）。UI テストの途中のスクリーンショットが欲しいときは `TEST_RUNNER_AMIZ_SNAPSHOT_DIR=<保存先>` を付けて走らせる（`ExportUITests` が対応）。
 
-確認用の起動：環境変数 `AMIZ_SCREEN` に `sample`（くまの頭）／`motif`（花のモチーフ）／`rabbit`（うさぎの胴体・螺旋編み）／`blanket`（ブランケットの縁・往復編み）／`big`（40段）／`symbols`（記号一覧）を渡すと、保存しないサンプルでその画面が開く（`SIMCTL_CHILD_AMIZ_SCREEN=sample xcrun simctl launch <UDID> com.akira.Amiz`、または Xcode のスキームの環境変数）。
+確認用の起動：環境変数 `AMIZ_SCREEN` に `sample`（くまの頭）／`colored`（くまの頭・色付き）／`motif`（花のモチーフ）／`rabbit`（うさぎの胴体・螺旋編み）／`blanket`（ブランケットの縁・往復編み）／`big`（40段）／`symbols`（記号一覧）を渡すと、保存しないサンプルでその画面が開く（`SIMCTL_CHILD_AMIZ_SCREEN=sample xcrun simctl launch <UDID> com.akira.Amiz`、または Xcode のスキームの環境変数）。
 
 ## Jira 運用
 

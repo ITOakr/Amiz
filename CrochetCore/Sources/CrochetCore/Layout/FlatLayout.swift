@@ -251,7 +251,7 @@ public enum FlatLayout {
             ref: stitch.ref, kind: stitch.kind, role: stitch.role, into: stitch.into, isCounted: stitch.isCounted,
             rowIndex: rowIndex, countedIndex: countedIndex, head: head, bases: bases, sharedBaseCount: sharedBaseCount,
             angle: angle, height: drawHeight(of: stitch, options: options),
-            polarAngle: atan2(-head.y, head.x), polarRadius: hypot(head.x, head.y)
+            polarAngle: atan2(-head.y, head.x), polarRadius: hypot(head.x, head.y), yarnID: stitch.yarnID
         )
     }
 

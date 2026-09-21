@@ -156,6 +156,11 @@ final class EditorModel {
         expansion.warnings(excludingRowAt: currentRowIndex)
     }
 
+    /// 色替えの位置（domain-spec 31）
+    var yarnChanges: [YarnChange] {
+        expansion.yarnChanges(in: displayedPattern)
+    }
+
     // MARK: - 糸（ui-spec U17・6-1）
 
     var yarns: [Yarn] { pattern.yarns }

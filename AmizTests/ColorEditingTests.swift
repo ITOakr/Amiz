@@ -89,3 +89,22 @@ struct ColorEditingTests {
         #expect(!model.canUndo)
     }
 }
+
+/// 図の色（レイアウトに糸が乗ること。描画そのものは目視）
+@Suite("図の色（レイアウトの糸）")
+struct ChartColorTests {
+    @Test("色付きのくまの頭：レイアウトの各目に糸が付き、色替えの位置が6つある")
+    func coloredSample() {
+        let pattern = SamplePatterns.bearHeadColored
+        let model = EditorModel(pattern: pattern)
+        let brown = pattern.yarns[1].id
+        let white = pattern.yarns[2].id
+        #expect(model.layout.stitches.filter { $0.rowIndex == 1 }.allSatisfy { $0.yarnID == brown })
+        #expect(model.layout.stitches.filter { $0.rowIndex == 3 }.allSatisfy { $0.yarnID == white })
+        #expect(model.layout.stitches.filter { $0.rowIndex == 2 && $0.yarnID == brown }.count == 2)
+        // 2段目でこげ茶に、3段目で生成りに、鼻でこげ茶→生成り、4段目で白、5段目（入力中。糸の指定なし）で生成りに戻る
+        let changes = model.yarnChanges
+        #expect(changes.count == 6)
+        #expect(changes.allSatisfy { change in change.previousRef.map { model.layout.stitch(for: $0) != nil } ?? false })
+    }
+}
