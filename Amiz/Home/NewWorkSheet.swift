@@ -15,6 +15,10 @@ struct NewWorkSheet: View {
     @State private var method: WorkingMethod = .joinedRounds
     /// 鎖の作り目の「1段目に編む目数」（domain-spec 33）
     @State private var stitchCountText = "20"
+    /// 最初の糸（ui-spec 4）
+    @State private var yarnName = "生成り"
+    @State private var yarnColor = Color(Yarn.fallback.color)
+    @Environment(\.self) private var environment
 
     private enum FoundationChoice: Hashable {
         case magicRing
@@ -68,6 +72,15 @@ struct NewWorkSheet: View {
                         Text("この組み合わせは今後対応します。鎖の作り目は往復編みと、わの作り目は輪編み・螺旋編みと組み合わせてください。")
                     }
                 }
+                Section {
+                    TextField("名前", text: $yarnName, prompt: Text("例：生成り"))
+                        .accessibilityIdentifier("newWork.yarnName")
+                    ColorPicker("色", selection: $yarnColor, supportsOpacity: false)
+                } header: {
+                    Text("最初の糸")
+                } footer: {
+                    Text("糸は編集画面の糸リストで後から追加・変更できます。")
+                }
             }
             .navigationTitle("新規作成")
             .navigationBarTitleDisplayMode(.inline)
@@ -77,9 +90,13 @@ struct NewWorkSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("作成") {
+                        let yarn = Yarn(
+                            name: yarnName.trimmingCharacters(in: .whitespaces).isEmpty ? "糸" : yarnName,
+                            color: YarnColor(yarnColor, in: environment)
+                        )
                         let work = Work(
                             name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "新しい作品" : name,
-                            pattern: Pattern(method: method, foundation: foundationKind)
+                            pattern: Pattern(method: method, foundation: foundationKind, yarns: [yarn])
                         )
                         onCreate(work)
                         dismiss()

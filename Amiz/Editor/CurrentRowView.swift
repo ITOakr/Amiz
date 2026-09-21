@@ -80,7 +80,7 @@ struct CurrentRowView: View {
             } else {
                 ForEach(steps) { step in
                     let ref = model.currentRowIndex.map { StitchRef(rowID: model.pattern.rows[$0].id, stepID: step.id) }
-                    StepChip(label: StitchTableFormatter.label(for: step), isSelected: ref != nil && model.selection == ref) {
+                    StepChip(label: StitchTableFormatter.label(for: step), yarn: chipYarn(for: step), isSelected: ref != nil && model.selection == ref) {
                         model.select(ref)
                     }
                 }
@@ -100,7 +100,7 @@ struct CurrentRowView: View {
             HStack(spacing: 0) {
                 ForEach(Array(session.row.steps.enumerated()), id: \.element.id) { index, step in
                     cursorGap(at: index, isCursor: session.cursor == index)
-                    StepChip(label: StitchTableFormatter.label(for: step), isSelected: false) {
+                    StepChip(label: StitchTableFormatter.label(for: step), yarn: chipYarn(for: step), isSelected: false) {
                         model.moveCursor(to: index + 1)
                     }
                     .accessibilityIdentifier("editing.step.\(index)")
@@ -143,20 +143,39 @@ struct CurrentRowView: View {
 /// 手順の1項目（チップ）
 private struct StepChip: View {
     let label: String
+    /// 糸の色見本（糸が2本以上の作品で、糸を持つ操作だけ）
+    var yarn: Yarn?
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(label)
-                .font(.caption)
-                .lineLimit(1)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(isSelected ? Color.orange.opacity(0.25) : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.orange : .clear, lineWidth: 1.5))
+            HStack(spacing: 4) {
+                if let yarn {
+                    YarnSwatch(color: yarn.color, size: 10)
+                }
+                Text(label)
+            }
+            .font(.caption)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(isSelected ? Color.orange.opacity(0.25) : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.orange : .clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(yarn.map { "\(label)・\($0.name)" } ?? label)
+    }
+}
+
+extension CurrentRowView {
+    /// 項目に添える糸。糸が1本だけの作品では添えない（見た目を増やさないため）
+    fileprivate func chipYarn(for step: Step) -> Yarn? {
+        guard model.yarns.count > 1 else { return nil }
+        switch step.kind {
+        case .skip, .leaveRemaining, .repeatGroup: return nil
+        default: return model.pattern.yarn(for: step.yarnID)
+        }
     }
 }
 
