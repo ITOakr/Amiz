@@ -147,7 +147,8 @@ public enum Expander {
                 kind: .chain,
                 role: .turningChain(chains: chains),
                 picks: counted ? state.pick(1) : state.pick(0),
-                isCounted: counted
+                isCounted: counted,
+                yarnID: step.yarnID
             ))
 
         case .stitch(let kind, let into):
@@ -156,7 +157,8 @@ public enum Expander {
                 kind: kind,
                 into: into,
                 picks: state.pick(for: kind, into: into, step: step),
-                isCounted: true
+                isCounted: true,
+                yarnID: step.yarnID
             ))
 
         case .increase(let kind, let count, let into):
@@ -168,7 +170,8 @@ public enum Expander {
                     kind: kind,
                     into: into,
                     picks: picks,
-                    isCounted: true
+                    isCounted: true,
+                    yarnID: step.yarnID
                 ))
             }
 
@@ -178,7 +181,8 @@ public enum Expander {
                 ref: state.ref(step, repetition: repetition),
                 kind: kind,
                 picks: state.pick(count),
-                isCounted: true
+                isCounted: true,
+                yarnID: step.yarnID
             ))
 
         case .skip:
@@ -194,7 +198,8 @@ public enum Expander {
                 kind: .slipStitch,
                 role: .closingSlipStitch,
                 picks: state.pick(0),
-                isCounted: false
+                isCounted: false,
+                yarnID: step.yarnID
             ))
 
         case .repeatGroup(let unit, let count):

@@ -41,9 +41,11 @@ public struct StitchTableRow: Hashable, Sendable {
 ///   単位が普通の目1つなら「残りの目すべてに細編み」、それ以外の1つなら「…×全目」、複数なら「（…）を段の終わりまで」
 /// - 1段目には「わの作り目に」「作り目に」を頭に付ける
 public enum StitchTableFormatter {
-    /// 段の手順の文章
+    /// 段の手順の文章。色が変わる項目には糸名を付ける（「茶で細編み2目」。domain-spec 31）。
+    /// 段の最初の項目は、前の段の終わりの糸と違うときだけ付ける
     public static func instruction(for row: Row, rowIndex: Int, in pattern: Pattern) -> String {
-        let body = items(for: row.steps).joined(separator: "、")
+        var context = YarnContext(pattern: pattern, current: previousRowLastYarnID(before: rowIndex, in: pattern))
+        let body = items(for: row.steps, context: &context).joined(separator: "、")
         guard rowIndex == 0 else { return body }
 
         let prefix = switch pattern.foundation {
@@ -74,6 +76,12 @@ public enum StitchTableFormatter {
         case .repeatGroup(let unit, let count):
             repeatText(unit: unit, count: count)
         }
+    }
+
+    /// 繰り返しの文章（糸名なし）
+    private static func repeatText(unit: [Step], count: RepeatCount) -> String {
+        var context = YarnContext(pattern: nil, current: nil)
+        return repeatText(unit: unit, count: count, context: &context)
     }
 
     /// 作り目の行の文章（「わの作り目」「作り目：鎖21目」。domain-spec 33）
@@ -153,15 +161,64 @@ public enum StitchTableFormatter {
 
     // MARK: - 操作の文章化
 
-    /// 操作の列を文章の項目にする。続く同じ目と「飛ばす」はまとめる
+    /// 文章に糸名を付けるための状態。`pattern` が nil なら糸名は付けない
+    struct YarnContext {
+        var pattern: Pattern?
+        /// 直前の項目の糸（既定の糸にそろえた ID）。nil なら次の項目に必ず糸名を付ける
+        var current: UUID?
+
+        /// この操作の糸で書くとき、項目の頭に付ける言葉（「茶で」）。糸が変わらなければ空
+        mutating func prefix(for step: Step) -> String {
+            guard let pattern else { return "" }
+            let yarnID = pattern.resolvedYarnID(step.yarnID)
+            guard yarnID != current else { return "" }
+            current = yarnID
+            return pattern.yarn(for: yarnID).name + "で"
+        }
+
+        /// 単位の中で複数の糸を使うか（使うなら、どの回でも読めるよう単位の最初の項目にも糸名を付ける）
+        func usesMultipleYarns(_ steps: [Step]) -> Bool {
+            guard let pattern else { return false }
+            return Set(Self.coloredSteps(steps).map { pattern.resolvedYarnID($0.yarnID) }).count > 1
+        }
+
+        /// 糸を持つ操作（飛ばす・残りは編まない・繰り返しそのものは除く）を、繰り返しの中まで順に
+        static func coloredSteps(_ steps: [Step]) -> [Step] {
+            steps.flatMap { step -> [Step] in
+                switch step.kind {
+                case .repeatGroup(let unit, _): coloredSteps(unit)
+                case .skip, .leaveRemaining: []
+                default: [step]
+                }
+            }
+        }
+    }
+
+    /// 前の段の最後の目の糸（段の先頭に糸名を付けるかの判定に使う）。1段目の前は既定の糸
+    static func previousRowLastYarnID(before rowIndex: Int, in pattern: Pattern) -> UUID {
+        for index in stride(from: rowIndex - 1, through: 0, by: -1) {
+            if let last = YarnContext.coloredSteps(pattern.rows[index].steps).last {
+                return pattern.resolvedYarnID(last.yarnID)
+            }
+        }
+        return pattern.defaultYarn.id
+    }
+
+    /// 操作の列を文章の項目にする（糸名なし）。続く同じ目と「飛ばす」はまとめる
     static func items(for steps: [Step]) -> [String] {
+        var context = YarnContext(pattern: nil, current: nil)
+        return items(for: steps, context: &context)
+    }
+
+    /// 操作の列を文章の項目にする。続く同じ目（同じ糸）と「飛ばす」はまとめる。色が変わる項目には糸名を付ける
+    static func items(for steps: [Step], context: inout YarnContext) -> [String] {
         var items: [String] = []
-        var pendingStitch: (kind: StitchKind, into: Placement, count: Int)?
+        var pendingStitch: (kind: StitchKind, into: Placement, count: Int, prefix: String)?
         var pendingSkips = 0
 
         func flush() {
             if let stitch = pendingStitch {
-                items.append(placementPrefix(stitch.into) + "\(stitch.kind.instructionName)\(stitch.count)目")
+                items.append(stitch.prefix + placementPrefix(stitch.into) + "\(stitch.kind.instructionName)\(stitch.count)目")
                 pendingStitch = nil
             }
             if pendingSkips > 0 {
@@ -173,11 +230,12 @@ public enum StitchTableFormatter {
         for step in steps {
             switch step.kind {
             case .stitch(let kind, let into):
-                if let stitch = pendingStitch, stitch.kind == kind, stitch.into == into {
-                    pendingStitch = (kind, into, stitch.count + 1)
+                let prefix = context.prefix(for: step)
+                if let stitch = pendingStitch, stitch.kind == kind, stitch.into == into, prefix.isEmpty {
+                    pendingStitch = (kind, into, stitch.count + 1, stitch.prefix)
                 } else {
                     flush()
-                    pendingStitch = (kind, into, 1)
+                    pendingStitch = (kind, into, 1, prefix)
                 }
                 continue
             case .skip:
@@ -192,20 +250,21 @@ public enum StitchTableFormatter {
             case .turningChain(let chains, let counted):
                 // 数えない鎖1目の立ち上がりは目数表には書かない（ui-spec 8章のサンプルに合わせる）。
                 // 標準と違う数え方なら「（数えない）」「（1目と数える）」を添える（domain-spec 6）
+                // 書かない項目では糸名の判定を進めない（糸名は次に書く項目に付ける）
                 if chains >= 2 || counted {
-                    items.append("立ち上がり鎖\(chains)目" + turningChainCountNote(chains: chains, counted: counted))
+                    items.append(context.prefix(for: step) + "立ち上がり鎖\(chains)目" + turningChainCountNote(chains: chains, counted: counted))
                 }
             case .increase(let kind, let count, let into):
-                items.append(placementPrefix(into) + "\(kind.instructionName)\(count)目編み入れる")
+                items.append(context.prefix(for: step) + placementPrefix(into) + "\(kind.instructionName)\(count)目編み入れる")
             case .decrease(let kind, let count):
-                items.append("\(kind.instructionName)\(count)目一度")
+                items.append(context.prefix(for: step) + "\(kind.instructionName)\(count)目一度")
             case .leaveRemaining:
                 items.append("残りは編まない")
             case .closeRound:
                 // 段を閉じる引き抜きは目数表には書かない
                 break
             case .repeatGroup(let unit, let count):
-                items.append(repeatText(unit: unit, count: count))
+                items.append(repeatText(unit: unit, count: count, context: &context))
             case .stitch, .skip:
                 break  // 上で処理済み
             }
@@ -214,21 +273,29 @@ public enum StitchTableFormatter {
         return items
     }
 
-    /// 繰り返しの文章（domain-spec 19）
-    private static func repeatText(unit: [Step], count: RepeatCount) -> String {
-        let unitItems = items(for: unit)
+    /// 繰り返しの文章（domain-spec 19）。糸名の付け方：単位が1色なら括弧の外に1回（「茶で（…）×6」）、
+    /// 単位の中で複数の糸を使うなら、どの回でも読めるよう単位の最初の項目にも付ける（「（白で…、茶で…）×6」）
+    private static func repeatText(unit: [Step], count: RepeatCount, context: inout YarnContext) -> String {
+        var outerPrefix = ""
+        if context.usesMultipleYarns(unit) {
+            context.current = nil
+        } else if let first = YarnContext.coloredSteps(unit).first {
+            outerPrefix = context.prefix(for: first)
+        }
+        let unitItems = items(for: unit, context: &context)
         let unitText = unitItems.joined(separator: "、")
         let isSingle = unitItems.count == 1
 
         switch count {
         case .times(let times):
-            return isSingle ? "\(unitText)×\(times)" : "（\(unitText)）×\(times)"
+            return outerPrefix + (isSingle ? "\(unitText)×\(times)" : "（\(unitText)）×\(times)")
         case .untilEnd:
-            // 「残りの目すべてに細編み」（domain-spec 17）／「細編み2目編み入れる×全目」（ui-spec 8章）
+            // 「残りの目すべてに細編み」（domain-spec 17）／「細編み2目編み入れる×全目」（ui-spec 8章）。
+            // 糸名が付くときは「茶で残りの目すべてに細編み」
             if isSingle, unit.count == 1, case .stitch(let kind, let into) = unit[0].kind {
-                return "残りの目すべてに" + placementPrefix(into) + kind.instructionName
+                return outerPrefix + "残りの目すべてに" + placementPrefix(into) + kind.instructionName
             }
-            return isSingle ? "\(unitText)×全目" : "（\(unitText)）を段の終わりまで"
+            return outerPrefix + (isSingle ? "\(unitText)×全目" : "（\(unitText)）を段の終わりまで")
         }
     }
 

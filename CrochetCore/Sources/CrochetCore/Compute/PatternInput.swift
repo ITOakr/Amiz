@@ -21,10 +21,20 @@ public enum PatternInput {
         var row = pattern.rows[index]
         let result = insertStitch(
             kind, modifier: modifier, at: row.steps.count, in: &row,
-            method: pattern.method, autoTurningChain: autoTurningChain, turningChainCounted: turningChainCounted
+            method: pattern.method, autoTurningChain: autoTurningChain, turningChainCounted: turningChainCounted,
+            yarnID: pattern.currentYarnID
         )
         pattern.rows[index] = row
         return result.insertedTurningChain
+    }
+
+    /// 糸を持ち替える（ui-spec U17）。これから編む目はこの糸になる。リストにない糸なら何もしない
+    /// - Returns: 持ち替えたか
+    @discardableResult
+    public static func changeYarn(to yarnID: UUID?, in pattern: inout Pattern) -> Bool {
+        if let yarnID, !pattern.yarns.contains(where: { $0.id == yarnID }) { return false }
+        pattern.currentYarnID = yarnID
+        return true
     }
 
     /// 目ボタンを押したときに、入力中の段の先頭に立ち上がりが自動で入るなら、その鎖の目数を返す（入らなければ nil）。
@@ -77,7 +87,7 @@ public enum PatternInput {
     public static func finishRow(of pattern: inout Pattern) {
         let index = ensureCurrentRow(in: &pattern)
         if pattern.method.closesRound, !endsWithCloseRound(pattern.rows[index]) {
-            pattern.rows[index].steps.append(.closeRound())
+            pattern.rows[index].steps.append(Step.closeRound().withYarn(pattern.currentYarnID))
         }
         pattern.rows.append(Row())
     }
@@ -102,11 +112,11 @@ public enum PatternInput {
         let step = Step.turningChain(chains, counted: counted)
 
         if case .turningChain = pattern.rows[index].steps.first?.kind {
-            let id = pattern.rows[index].steps[0].id
-            pattern.rows[index].steps[0] = Step(id: id, kind: step.kind)
+            let first = pattern.rows[index].steps[0]
+            pattern.rows[index].steps[0] = Step(id: first.id, kind: step.kind, yarnID: first.yarnID)
             return false
         }
-        pattern.rows[index].steps.insert(step, at: 0)
+        pattern.rows[index].steps.insert(step.withYarn(pattern.currentYarnID), at: 0)
         return true
     }
 

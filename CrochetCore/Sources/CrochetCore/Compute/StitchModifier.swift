@@ -1,3 +1,5 @@
+import Foundation
+
 /// 先に選ぶボタンの状態（ui-spec 5-6 グループ2）。
 ///
 /// 「2目編み入れる」「2目一度」「束に」「残りすべてに」を先に押してから目ボタンを押すと、
@@ -32,15 +34,16 @@ public struct StitchModifier: Hashable, Sendable {
         group != nil || chainSpace || untilEnd
     }
 
-    /// 目ボタンを押したときの操作を作る
-    public func step(for kind: StitchKind) -> Step {
+    /// 目ボタンを押したときの操作を作る。`yarnID` は目の糸（繰り返しの操作そのものには付けず、単位の中の目に付ける）
+    public func step(for kind: StitchKind, yarnID: UUID? = nil) -> Step {
         let placement: Placement = chainSpace ? .chainSpace : .stitch
         let inner: Step = switch group {
         case .increase(let count): .increase(kind, count: count, into: placement)
         case .decrease(let count): .decrease(kind, count: count)
         case nil: .stitch(kind, into: placement)
         }
-        return untilEnd ? .untilEnd([inner]) : inner
+        let colored = inner.withYarn(yarnID)
+        return untilEnd ? .untilEnd([colored]) : colored
     }
 
     // MARK: - ボタンの切り替え（ui-spec 5-6）

@@ -6,7 +6,7 @@ import Foundation
 /// ここにある段＋位置を指定する関数の特別な場合として扱える。
 extension PatternInput {
     /// 段の `index` の位置に目を入れる。先に選ぶ状態を適用し、その段にまだ鎖以外の目がなければ立ち上がりを先頭に自動で入れる。
-    /// `turningChainCounted` は自動で入れる立ち上がりを1目と数えるか（nil なら標準）
+    /// `turningChainCounted` は自動で入れる立ち上がりを1目と数えるか（nil なら標準）。`yarnID` は入れる目と立ち上がりの糸（今持っている糸）
     /// - Returns: 入れた操作の数（立ち上がりが自動で入れば 2、そうでなければ 1）。入れた後の入力位置は `index + 戻り値`。
     ///   ただし立ち上がりは先頭に入るので、`index` より前に1つ増える
     @discardableResult
@@ -17,9 +17,10 @@ extension PatternInput {
         in row: inout Row,
         method: WorkingMethod,
         autoTurningChain: Bool = true,
-        turningChainCounted: Bool? = nil
+        turningChainCounted: Bool? = nil,
+        yarnID: UUID? = nil
     ) -> (insertedTurningChain: Bool, stepIndex: Int) {
-        var step = modifier.step(for: kind)
+        var step = modifier.step(for: kind, yarnID: yarnID)
         if case .repeatGroup(let unit, .untilEnd) = step.kind, !canRepeatUntilEnd(unit: unit) {
             step = unit[0]
         }
@@ -27,7 +28,7 @@ extension PatternInput {
         var insertedTurningChain = false
         var position = min(max(index, 0), row.steps.count)
         if let chains = turningChainToInsert(for: kind, in: row, method: method, autoTurningChain: autoTurningChain) {
-            row.steps.insert(.turningChain(chains, counted: turningChainCounted), at: 0)
+            row.steps.insert(.turningChain(chains, counted: turningChainCounted).withYarn(yarnID), at: 0)
             insertedTurningChain = true
             position += 1
         }

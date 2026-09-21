@@ -29,19 +29,21 @@ extension Step {
     public func duplicated() -> Step {
         switch kind {
         case .repeatGroup(let unit, let count):
-            Step(kind: .repeatGroup(unit: unit.map { $0.duplicated() }, count: count))
+            Step(kind: .repeatGroup(unit: unit.map { $0.duplicated() }, count: count), yarnID: yarnID)
         default:
-            Step(kind: kind)
+            Step(kind: kind, yarnID: yarnID)
         }
     }
 
-    /// ID を無視して内容が同じか。繰り返しは単位の中まで比べる
+    /// ID を無視して内容（種類と糸）が同じか。繰り返しは単位の中まで比べる。
+    /// 糸も比べるので、色違いのしま模様の段は「同じ内容の段」にまとまらない（domain-spec 18）
     public func hasSameShape(as other: Step) -> Bool {
+        guard yarnID == other.yarnID else { return false }
         switch (kind, other.kind) {
         case (.repeatGroup(let unit, let count), .repeatGroup(let otherUnit, let otherCount)):
-            count == otherCount && Step.haveSameShape(unit, otherUnit)
+            return count == otherCount && Step.haveSameShape(unit, otherUnit)
         default:
-            kind == other.kind
+            return kind == other.kind
         }
     }
 
