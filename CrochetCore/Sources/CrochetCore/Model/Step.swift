@@ -62,10 +62,19 @@ public enum StepKind: Hashable, Sendable {
 public struct Step: Identifiable, Hashable, Sendable {
     public let id: UUID
     public var kind: StepKind
+    /// 糸（domain-spec 27）。nil なら既定の糸。繰り返しの中の操作にも付き、全部の回で同じ糸になる。
+    /// 繰り返しの操作そのものには付けない（単位の中の操作が持つ）
+    public var yarnID: UUID?
 
-    public init(id: UUID = UUID(), kind: StepKind) {
+    public init(id: UUID = UUID(), kind: StepKind, yarnID: UUID? = nil) {
         self.id = id
         self.kind = kind
+        self.yarnID = yarnID
+    }
+
+    /// 糸を変えたコピー
+    public func withYarn(_ yarnID: UUID?) -> Step {
+        Step(id: id, kind: kind, yarnID: yarnID)
     }
 }
 
@@ -129,10 +138,11 @@ extension Step {
 //   {"id":"…","type":"decrease","stitch":"singleCrochet","count":2}
 //   {"id":"…","type":"skip"} / {"type":"leaveRemaining"} / {"type":"closeRound"}
 //   {"id":"…","type":"repeat","count":6,"unit":[…]}   （段の終わりまでは "count":"untilEnd"）
+//   糸を指定した操作は "yarn":"<糸のID>" が付く（既定の糸なら付かない）
 
 extension Step: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, type, chains, counted, stitch, count, into, unit
+        case id, type, chains, counted, stitch, count, into, unit, yarn
     }
 
     private enum TypeName: String, Codable {
@@ -181,12 +191,13 @@ extension Step: Codable {
             )
         }
 
-        self.init(id: id, kind: kind)
+        self.init(id: id, kind: kind, yarnID: try container.decodeIfPresent(UUID.self, forKey: .yarn))
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(yarnID, forKey: .yarn)
 
         switch kind {
         case .turningChain(let chains, let counted):

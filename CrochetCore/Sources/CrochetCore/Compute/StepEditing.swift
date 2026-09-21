@@ -58,9 +58,58 @@ extension PatternInput {
         case .turningChain, .skip, .leaveRemaining, .closeRound, .repeatGroup:
             return false
         }
-        replaceStep(at: location, with: Step(id: step.id, kind: newKind), in: &pattern)
+        replaceStep(at: location, with: Step(id: step.id, kind: newKind, yarnID: step.yarnID), in: &pattern)
         return true
     }
+
+    // MARK: - 糸（domain-spec 27・28）
+
+    /// 目の糸を変える（ui-spec U21）。繰り返しの中の目なら、その繰り返しを解除してから、指した回の目だけを変える（domain-spec 27）。
+    /// 「n目編み入れる」の n 目は同じ操作なので、まとめて変わる
+    /// - Returns: 変えたか
+    @discardableResult
+    public static func setYarn(_ yarnID: UUID?, at ref: StitchRef, in pattern: inout Pattern) -> Bool {
+        guard let location = locate(ref, in: pattern) else { return false }
+        var target = location
+        if let unitIndex = location.unitIndex {
+            // 解除すると、繰り返しの位置に「単位 × 回数」の操作が順に並ぶので、指した回の操作の位置は計算できる
+            guard case .repeatGroup(let unit, _) = pattern.rows[location.rowIndex].steps[location.stepIndex].kind,
+                  unwrapRepeat(containing: ref, in: &pattern) else { return false }
+            let stepIndex = location.stepIndex + ref.repetition * unit.count + unitIndex
+            guard pattern.rows[location.rowIndex].steps.indices.contains(stepIndex) else { return false }
+            target = StepLocation(rowIndex: location.rowIndex, stepIndex: stepIndex, unitIndex: nil)
+        }
+        guard let step = step(at: target, in: pattern) else { return false }
+        switch step.kind {
+        case .skip, .leaveRemaining, .repeatGroup:
+            return false
+        default:
+            replaceStep(at: target, with: step.withYarn(yarnID), in: &pattern)
+            return true
+        }
+    }
+
+    /// 段全体の糸を変える（domain-spec 28）。繰り返しの単位の中の操作も変える
+    /// - Returns: 変えたか（段がなければ false）
+    @discardableResult
+    public static func setYarn(_ yarnID: UUID?, forRowAt rowIndex: Int, in pattern: inout Pattern) -> Bool {
+        guard pattern.rows.indices.contains(rowIndex) else { return false }
+        pattern.rows[rowIndex].steps = pattern.rows[rowIndex].steps.map { recolored($0, yarnID: yarnID) }
+        return true
+    }
+
+    /// 操作とその単位の中の糸を変えたコピー（繰り返しの操作そのものには糸を付けない）
+    private static func recolored(_ step: Step, yarnID: UUID?) -> Step {
+        switch step.kind {
+        case .repeatGroup(let unit, let count):
+            Step(id: step.id, kind: .repeatGroup(unit: unit.map { recolored($0, yarnID: yarnID) }, count: count))
+        case .skip, .leaveRemaining:
+            step
+        default:
+            step.withYarn(yarnID)
+        }
+    }
+
 
     /// 操作を削除する。繰り返しの中なら単位から消える（すべての回に反映）。単位が空になれば繰り返しごと消す
     /// - Returns: 消したか
@@ -121,9 +170,10 @@ extension PatternInput {
         let step = Step.turningChain(chains, counted: counted)
         if case .turningChain = pattern.rows[rowIndex].steps.first?.kind {
             let id = pattern.rows[rowIndex].steps[0].id
-            pattern.rows[rowIndex].steps[0] = Step(id: id, kind: step.kind)
+            let yarnID = pattern.rows[rowIndex].steps[0].yarnID
+            pattern.rows[rowIndex].steps[0] = Step(id: id, kind: step.kind, yarnID: yarnID)
         } else {
-            pattern.rows[rowIndex].steps.insert(step, at: 0)
+            pattern.rows[rowIndex].steps.insert(step.withYarn(pattern.currentYarnID), at: 0)
         }
         return true
     }
@@ -134,8 +184,8 @@ extension PatternInput {
     public static func setTurningChainCounted(_ counted: Bool, rowID: UUID, in pattern: inout Pattern) -> Bool {
         guard let rowIndex = pattern.rows.firstIndex(where: { $0.id == rowID }),
               case .turningChain(let chains, _) = pattern.rows[rowIndex].steps.first?.kind else { return false }
-        let id = pattern.rows[rowIndex].steps[0].id
-        pattern.rows[rowIndex].steps[0] = Step(id: id, kind: .turningChain(chains: chains, counted: counted))
+        let first = pattern.rows[rowIndex].steps[0]
+        pattern.rows[rowIndex].steps[0] = Step(id: first.id, kind: .turningChain(chains: chains, counted: counted), yarnID: first.yarnID)
         return true
     }
 

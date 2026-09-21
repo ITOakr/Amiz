@@ -1,3 +1,5 @@
+import Foundation
+
 /// 展開後の1目。段の手順（`Row.steps`）から計算する値で、保存しない（tech-spec 5-1）。
 ///
 /// 目数の計算、整合性チェック、図の座標計算、目の選択はすべてこの列を元にする。
@@ -26,6 +28,8 @@ public struct ExpandedStitch: Hashable, Sendable {
     public var picks: Range<Int>
     /// 目数に数えるか（domain-spec 6・8）
     public var isCounted: Bool
+    /// 糸（操作の糸。nil なら既定の糸。domain-spec 27）
+    public var yarnID: UUID?
 
     public init(
         ref: StitchRef,
@@ -33,7 +37,8 @@ public struct ExpandedStitch: Hashable, Sendable {
         role: Role = .regular,
         into: Placement = .stitch,
         picks: Range<Int>,
-        isCounted: Bool
+        isCounted: Bool,
+        yarnID: UUID? = nil
     ) {
         self.ref = ref
         self.kind = kind
@@ -41,6 +46,7 @@ public struct ExpandedStitch: Hashable, Sendable {
         self.into = into
         self.picks = picks
         self.isCounted = isCounted
+        self.yarnID = yarnID
     }
 
     /// 「鎖を除いた目数」から除く目か。普通の鎖編みだけを除き、数える立ち上がりは含める（domain-spec 8）
