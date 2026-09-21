@@ -58,10 +58,44 @@ struct ExportPageView: View {
             if document.options.includesChart {
                 chart
                     .frame(maxWidth: .infinity)
-                    .frame(height: document.options.includesLegend ? 470 : 660)
+                    .frame(height: chartHeight)
             }
             if document.options.includesLegend {
                 legend
+            }
+            if !document.yarnList.isEmpty {
+                yarns
+            }
+        }
+    }
+
+    /// 図の高さ：凡例と糸リストのぶんを空ける
+    private var chartHeight: CGFloat {
+        var height: CGFloat = 660
+        if document.options.includesLegend { height -= 190 }
+        if !document.yarnList.isEmpty { height -= 40 + CGFloat(min(document.yarnList.count, 6)) * 22 }
+        return max(height, 300)
+    }
+
+    /// 糸リスト（domain-spec 29）：色見本・名前・メモ
+    private var yarns: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("糸")
+                .font(.headline)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 4) {
+                ForEach(document.yarnList) { yarn in
+                    HStack(spacing: 8) {
+                        YarnSwatch(color: yarn.color, size: 16)
+                        Text(yarn.name)
+                            .font(.caption)
+                        if !yarn.memo.isEmpty {
+                            Text(yarn.memo)
+                                .font(.caption2)
+                                .foregroundStyle(.gray)
+                        }
+                    }
+                    .accessibilityIdentifier("export.yarn.\(yarn.name)")
+                }
             }
         }
     }
