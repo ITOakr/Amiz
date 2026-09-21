@@ -91,7 +91,7 @@ struct HomeView: View {
     }
 }
 
-/// 作品カード（ui-spec 3）。サムネイルはフェーズ10まで仮のアイコン
+/// 作品カード（ui-spec 3）。サムネイルは保存時に作った図の縮小画像。まだなければ仮のアイコン
 private struct WorkCard: View {
     let work: Work
 
@@ -101,10 +101,19 @@ private struct WorkCard: View {
                 .fill(Color(.secondarySystemBackground))
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
-                    Image(systemName: "circle.circle")
-                        .font(.largeTitle)
-                        .foregroundStyle(.tertiary)
+                    if let data = work.thumbnail, let image = ThumbnailRenderer.image(from: data) {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .padding(6)
+                            .accessibilityIdentifier("home.thumbnail")
+                    } else {
+                        Image(systemName: "circle.circle")
+                            .font(.largeTitle)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             Text(work.name)
                 .font(.headline)
                 .lineLimit(1)

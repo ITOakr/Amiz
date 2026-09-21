@@ -45,7 +45,8 @@ struct EditorView: View {
     init(work: Work) {
         let pattern = work.loadPattern() ?? Pattern(method: work.method, foundation: .magicRing)
         self.init(model: EditorModel(pattern: pattern), title: work.name) { pattern in
-            work.save(pattern: pattern)
+            // サムネイルは保存のたびに作り直す（ui-spec 3）
+            work.save(pattern: pattern, thumbnail: ThumbnailRenderer.png(for: pattern))
         }
     }
 
