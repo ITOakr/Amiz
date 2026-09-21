@@ -15,7 +15,7 @@ final class Work {
     var methodRawValue: String = WorkingMethod.joinedRounds.rawValue
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
-    /// 一覧のサムネイル（フェーズ10で生成する。それまで nil）
+    /// 一覧のサムネイル（図を小さく描いた PNG。保存時に作る）
     var thumbnail: Data?
     /// 編み図本体（`Pattern` の JSON）
     var patternData: Data = Data()
@@ -38,11 +38,12 @@ final class Work {
         try? Pattern(jsonData: patternData)
     }
 
-    /// 編み図を保存する（更新日も進める）。すぐにディスクへ書き込む
-    func save(pattern: Pattern) {
+    /// 編み図を保存する（更新日も進める）。すぐにディスクへ書き込む。`thumbnail` を渡せばサムネイルも更新する
+    func save(pattern: Pattern, thumbnail: Data? = nil) {
         guard let data = try? pattern.jsonData() else { return }
         patternData = data
         methodRawValue = pattern.method.rawValue
+        if let thumbnail { self.thumbnail = thumbnail }
         updatedAt = Date()
         try? modelContext?.save()
     }
