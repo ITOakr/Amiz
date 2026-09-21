@@ -168,7 +168,7 @@ struct ExportPageView: View {
             if let warning {
                 Text("⚠ " + warning)
                     .font(.caption2)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.warning)
                     .padding(.leading, 72)
             }
         }

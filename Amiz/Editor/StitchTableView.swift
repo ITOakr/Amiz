@@ -107,7 +107,7 @@ struct StitchTableView: View {
                 if let warning {
                     Text(warning.message)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.warning)
                         .padding(.leading, 56)
                 }
             }
@@ -130,8 +130,8 @@ struct StitchTableView: View {
     }
 
     private func rowBackground(hasWarning: Bool, isEditing: Bool) -> Color {
-        if isEditing { return Color.accentColor.opacity(0.12) }
-        if hasWarning { return Color.red.opacity(0.08) }
+        if isEditing { return AppTheme.accent.opacity(0.12) }
+        if hasWarning { return AppTheme.warning.opacity(0.1) }
         return .clear
     }
 

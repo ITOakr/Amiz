@@ -25,8 +25,8 @@ struct StitchKeyboardView: View {
         .environment(\.keyboardButtonHeight, isLarge ? 60 : 48)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(.secondarySystemBackground))
-        .buttonBorderShape(.roundedRectangle(radius: 10))
+        .background(AppTheme.surface)
+        .buttonBorderShape(.roundedRectangle(radius: AppTheme.buttonRadius))
         .alert("繰り返し", isPresented: $isRepeatEndPresented) {
             TextField("回数", text: $repeatCountText)
                 .keyboardType(.numberPad)
@@ -210,8 +210,8 @@ private struct ModifierButton: View {
                 .frame(maxWidth: .infinity, minHeight: height)
         }
         .buttonStyle(.bordered)
-        .tint(isSelected ? .accentColor : .primary)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: 8))
+        .tint(isSelected ? AppTheme.accent : .primary)
+        .background(isSelected ? AppTheme.accent.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: AppTheme.buttonRadius))
     }
 }
 

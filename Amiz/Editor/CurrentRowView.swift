@@ -31,7 +31,7 @@ struct CurrentRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(model.editingSession == nil ? Color(.systemBackground) : Color.accentColor.opacity(0.08))
+        .background(model.editingSession == nil ? AppTheme.canvas : AppTheme.accent.opacity(0.08))
         // 縦は必要な高さだけ使い、余りは目数表に渡す
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -135,7 +135,7 @@ struct CurrentRowView: View {
     /// 入力位置の縦線
     private var cursorBar: some View {
         Rectangle()
-            .fill(Color.accentColor)
+            .fill(AppTheme.accent)
             .frame(width: 2, height: 20)
     }
 }
@@ -160,8 +160,8 @@ private struct StepChip: View {
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(isSelected ? Color.orange.opacity(0.25) : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.orange : .clear, lineWidth: 1.5))
+            .background(isSelected ? AppTheme.selection.opacity(0.25) : AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
+            .overlay(RoundedRectangle(cornerRadius: AppTheme.chipRadius).stroke(isSelected ? AppTheme.selection : AppTheme.hairline, lineWidth: isSelected ? 1.5 : 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(yarn.map { "\(label)・\($0.name)" } ?? label)

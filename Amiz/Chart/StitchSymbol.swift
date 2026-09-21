@@ -212,7 +212,7 @@ private func * (lhs: CGPoint, rhs: CGFloat) -> CGPoint { CGPoint(x: lhs.x * rhs,
 struct StitchSymbolView: View {
     let kind: StitchKind
     var size: CGFloat = 28
-    var color: Color = .primary
+    var color: Color = AppTheme.ink
 
     var body: some View {
         Canvas { context, canvasSize in

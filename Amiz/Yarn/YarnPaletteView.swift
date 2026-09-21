@@ -14,11 +14,11 @@ struct YarnPaletteView: View {
             HStack {
                 Label("色編集モード", systemImage: "paintpalette.fill")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.purple)
+                    .foregroundStyle(AppTheme.colorMode)
                 Spacer()
                 Button("完了") { model.endColorEditing() }
                     .buttonStyle(.borderedProminent)
-                    .tint(.purple)
+                    .tint(AppTheme.colorMode)
                     .accessibilityIdentifier("palette.done")
             }
             Text("糸を選んで、図の目をタップ（なぞると続けて塗れます）。目数表の段をタップすると段全体を塗ります。")
@@ -50,7 +50,7 @@ struct YarnPaletteView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.purple.opacity(0.08))
+        .background(AppTheme.colorMode.opacity(0.1))
         .sheet(isPresented: $isAddingYarn) {
             YarnEditSheet(yarn: Yarn(name: "", color: YarnColor(hex: "#A8C5E2")!), isNew: true, canDelete: false) { yarn in
                 model.addYarn(yarn)
@@ -67,7 +67,7 @@ struct YarnPaletteView: View {
         } label: {
             VStack(spacing: 4) {
                 YarnSwatch(color: yarn.color, size: isLarge ? 34 : 28)
-                    .overlay(Circle().stroke(Color.purple, lineWidth: isSelected ? 3 : 0).padding(-3))
+                    .overlay(Circle().stroke(AppTheme.colorMode, lineWidth: isSelected ? 3 : 0).padding(-3))
                 Text(yarn.name)
                     .font(.caption2)
                     .lineLimit(1)
