@@ -11,6 +11,10 @@ struct HomeView: View {
     /// 画面の遷移先の積み重ね（作品を作ったらそのまま編集画面へ進むために持つ）
     @State private var path = NavigationPath()
     @State private var isNewWorkPresented = false
+    /// カードのメニュー（ui-spec 3）：名前を変える作品と入力中の名前、削除の確認中の作品
+    @State private var renamingWork: Work?
+    @State private var renameText = ""
+    @State private var deletingWork: Work?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -52,7 +56,59 @@ struct HomeView: View {
                     path.append(work)
                 }
             }
+            .alert("名前の変更", isPresented: isRenamePresented) {
+                TextField("作品名", text: $renameText)
+                    .accessibilityIdentifier("home.renameField")
+                Button("変更") {
+                    if let work = renamingWork {
+                        rename(work, to: renameText)
+                    }
+                }
+                Button("キャンセル", role: .cancel) {}
+            }
+            .confirmationDialog("この作品を削除しますか？", isPresented: isDeletePresented, titleVisibility: .visible) {
+                Button("削除", role: .destructive) {
+                    if let work = deletingWork {
+                        delete(work)
+                    }
+                }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("「\(deletingWork?.name ?? "")」の編み図が消えます。元に戻せません。")
+            }
         }
+    }
+
+    // MARK: - カードのメニュー（ui-spec 3）
+
+    private var isRenamePresented: Binding<Bool> {
+        Binding(get: { renamingWork != nil }, set: { if !$0 { renamingWork = nil } })
+    }
+
+    private var isDeletePresented: Binding<Bool> {
+        Binding(get: { deletingWork != nil }, set: { if !$0 { deletingWork = nil } })
+    }
+
+    private func rename(_ work: Work, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        work.name = trimmed
+        work.updatedAt = Date()
+        try? context.save()
+    }
+
+    /// 複製：同じ編み図とサムネイルで「〜のコピー」を作る。更新日は今なので一覧の先頭に来る
+    private func duplicate(_ work: Work) {
+        guard let pattern = work.loadPattern() else { return }
+        let copy = Work(name: work.name + "のコピー", pattern: pattern)
+        copy.thumbnail = work.thumbnail
+        context.insert(copy)
+        try? context.save()
+    }
+
+    private func delete(_ work: Work) {
+        context.delete(work)
+        try? context.save()
     }
 
     private enum Destination: Hashable {
@@ -84,6 +140,19 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("home.work")
+                    // カードの長押しメニュー（ui-spec 3）
+                    .contextMenu {
+                        Button("名前の変更", systemImage: "pencil") {
+                            renameText = work.name
+                            renamingWork = work
+                        }
+                        Button("複製", systemImage: "plus.square.on.square") {
+                            duplicate(work)
+                        }
+                        Button("削除", systemImage: "trash", role: .destructive) {
+                            deletingWork = work
+                        }
+                    }
                 }
             }
             .padding(16)
