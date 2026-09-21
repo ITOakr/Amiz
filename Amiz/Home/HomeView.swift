@@ -134,7 +134,7 @@ struct HomeView: View {
     /// 作品カードのグリッド（iPad は列数が増える）
     private var grid: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 16)], spacing: 16) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 240), spacing: 20)], spacing: 20) {
                 ForEach(works) { work in
                     NavigationLink(value: work) {
                         WorkCard(work: work)
@@ -167,8 +167,11 @@ private struct WorkCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // 白い面＋薄い影で地から浮かせる。生成りの地に溶けないよう、ごく薄い縁取り（ui-spec 1章）
             RoundedRectangle(cornerRadius: AppTheme.cardRadius)
-                .fill(AppTheme.surface)
+                .fill(AppTheme.card)
+                .overlay(RoundedRectangle(cornerRadius: AppTheme.cardRadius).stroke(AppTheme.hairline, lineWidth: 1))
+                .shadow(color: AppTheme.shadow, radius: 6, y: 2)
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
                     if let data = work.thumbnail, let image = ThumbnailRenderer.image(from: data) {

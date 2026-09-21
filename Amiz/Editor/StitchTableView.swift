@@ -31,6 +31,8 @@ struct StitchTableView: View {
                 }
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.canvas)
             .accessibilityIdentifier("stitchTable")
             .alert("この段を複製", isPresented: isDuplicatePresented) {
                 TextField("回数", text: $duplicateCountText)
@@ -132,7 +134,7 @@ struct StitchTableView: View {
     private func rowBackground(hasWarning: Bool, isEditing: Bool) -> Color {
         if isEditing { return AppTheme.accent.opacity(0.12) }
         if hasWarning { return AppTheme.warning.opacity(0.1) }
-        return .clear
+        return AppTheme.canvas
     }
 
     /// 入力中の段の行（ui-spec 8章のサンプル：「4 | 入力中 | —」）

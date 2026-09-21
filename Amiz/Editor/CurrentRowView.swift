@@ -31,7 +31,7 @@ struct CurrentRowView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(model.editingSession == nil ? AppTheme.canvas : AppTheme.accent.opacity(0.08))
+        .background(model.editingSession == nil ? AppTheme.card : AppTheme.accent.opacity(0.08))
         // 縦は必要な高さだけ使い、余りは目数表に渡す
         .fixedSize(horizontal: false, vertical: true)
     }
