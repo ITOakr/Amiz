@@ -30,6 +30,12 @@ final class EditorModel {
     private(set) var pendingConfirmation: PendingConfirmation?
     /// 過去の段を編集中（状態 S4。ui-spec U16）。作業用のコピーに入力し、「完了」で編み図に反映する
     private(set) var editingSession: RowEditingSession?
+    /// 色編集モード（状態 S5。ui-spec U21）。キーボードが糸パレットになり、図の目や目数表の段をタップして塗る
+    private(set) var isColorEditing = false
+    /// 色編集モードでパレットから選んでいる糸（塗る色）
+    var paintYarnID: UUID?
+    /// なぞって塗っている最中（1回のなぞりを元に戻すの1回にまとめるため）
+    private var paintStrokeSnapshot: Pattern?
 
     /// 過去の段の編集（U16）
     struct RowEditingSession {
@@ -180,6 +186,52 @@ final class EditorModel {
         mutate { PatternInput.deleteYarn(id: id, from: &$0) }
     }
 
+    // MARK: - 色編集モード（ui-spec U21）
+
+    /// 色編集モードに入る。過去の段の編集中は入れない。選択や先に選ぶ状態は解除し、塗る色は今持っている糸から始める
+    func beginColorEditing() {
+        guard editingSession == nil else { return }
+        selection = nil
+        modifier = .none
+        repeatStartIndex = nil
+        paintYarnID = currentYarn.id
+        isColorEditing = true
+    }
+
+    /// 「完了」：通常の入力に戻る
+    func endColorEditing() {
+        endPaintStroke()
+        isColorEditing = false
+    }
+
+    /// 目を塗る。繰り返しの中の目なら、その繰り返しを解除してからその目だけ塗る（domain-spec 27）
+    func paintStitch(_ ref: StitchRef) {
+        guard isColorEditing else { return }
+        mutate { PatternInput.setYarn(paintYarnID, at: ref, in: &$0) }
+    }
+
+    /// 段全体を塗る（domain-spec 28）
+    func paintRow(at index: Int) {
+        guard isColorEditing else { return }
+        mutate { PatternInput.setYarn(paintYarnID, forRowAt: index, in: &$0) }
+    }
+
+    /// なぞり始め：ここから `endPaintStroke` までの塗りを、元に戻すの1回にまとめる
+    func beginPaintStroke() {
+        guard isColorEditing, paintStrokeSnapshot == nil else { return }
+        paintStrokeSnapshot = pattern
+    }
+
+    /// なぞり終わり
+    func endPaintStroke() {
+        guard let snapshot = paintStrokeSnapshot else { return }
+        paintStrokeSnapshot = nil
+        if snapshot != pattern {
+            undoStack.append(snapshot)
+            redoStack.removeAll()
+        }
+    }
+
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
     var isRepeating: Bool { (editingSession?.repeatStartIndex ?? repeatStartIndex) != nil }
@@ -253,8 +305,9 @@ final class EditorModel {
     // MARK: - 目ボタン・先に選ぶボタン
 
     /// 目ボタン。選択中なら選択した目の種類を変える（U15）。そうでなければ先に選ぶ状態を適用して1操作追加し、状態を解除する。
-    /// 立ち上がりが自動で入る目で、設定が「毎回選択」なら、数えるかを聞いてから入れる（7-4）
+    /// 立ち上がりが自動で入る目で、設定が「毎回選択」なら、数えるかを聞いてから入れる（7-4）。色編集モード中は何もしない
     func pressStitch(_ kind: StitchKind) {
+        guard !isColorEditing else { return }
         if selection != nil {
             modifier = .none
             request(.changeKind(kind))
@@ -464,7 +517,7 @@ final class EditorModel {
 
     /// 段の編集を始める。入力中の段（最後の段）は対象外
     func beginEditingRow(at index: Int) {
-        guard let current = currentRowIndex, index < current, pattern.rows.indices.contains(index) else { return }
+        guard !isColorEditing, let current = currentRowIndex, index < current, pattern.rows.indices.contains(index) else { return }
         selection = nil
         modifier = .none
         let row = pattern.rows[index]
@@ -545,6 +598,7 @@ final class EditorModel {
 
     /// 目を選ぶ。同じ目をもう一度選ぶと解除
     func select(_ ref: StitchRef?) {
+        guard !isColorEditing else { return }
         selection = selection == ref ? nil : ref
         modifier = .none
     }
@@ -672,8 +726,11 @@ final class EditorModel {
         var after = pattern
         change(&after)
         guard after != before else { return }
-        undoStack.append(before)
-        redoStack.removeAll()
+        // なぞって塗っている間は、なぞり始めの状態を1回だけ積む（endPaintStroke で）
+        if paintStrokeSnapshot == nil {
+            undoStack.append(before)
+            redoStack.removeAll()
+        }
         pattern = after
         recompute()
     }

@@ -152,7 +152,17 @@ struct EditorView: View {
             CurrentRowView(model: model)
             Divider()
             contextBar
-            StitchKeyboardView(model: model)
+            keyboardOrPalette(isLarge: false)
+        }
+    }
+
+    /// 編み目キーボード（D）。色編集モード中は糸パレットに切り替わる（ui-spec U21）
+    @ViewBuilder
+    private func keyboardOrPalette(isLarge: Bool) -> some View {
+        if model.isColorEditing {
+            YarnPaletteView(model: model, isLarge: isLarge)
+        } else {
+            StitchKeyboardView(model: model, isLarge: isLarge)
         }
     }
 
@@ -171,7 +181,7 @@ struct EditorView: View {
                 CurrentRowView(model: model)
                 Divider()
                 contextBar
-                StitchKeyboardView(model: model, isLarge: true)
+                keyboardOrPalette(isLarge: true)
                 Spacer(minLength: 0)
             }
             .frame(width: 392)
@@ -233,9 +243,9 @@ struct EditorView: View {
                 .disabled(!model.canRedo)
                 .accessibilityIdentifier("op.redo")
             Menu("その他", systemImage: "ellipsis.circle") {
-                // 色の編集はフェーズ9で有効にする
-                Button("色を編集", systemImage: "paintpalette") {}
-                    .disabled(true)
+                Button("色を編集", systemImage: "paintpalette") { model.beginColorEditing() }
+                    .disabled(model.isColorEditing || model.editingSession != nil)
+                    .accessibilityIdentifier("menu.colorEdit")
                 Button("書き出し", systemImage: "square.and.arrow.up") { requestExport() }
                     .accessibilityIdentifier("menu.export")
             }
@@ -262,7 +272,12 @@ struct EditorView: View {
             selected: model.selectedStitch,
             showsRowNumbers: showsRowNumbers,
             showsSeamMarks: model.pattern.method == .spiral,
-            onTapStitch: { model.select($0.ref) }
+            onTapStitch: { stitch in
+                if model.isColorEditing { model.paintStitch(stitch.ref) } else { model.select(stitch.ref) }
+            },
+            onPaint: model.isColorEditing ? { model.paintStitch($0.ref) } : nil,
+            onPaintStrokeBegan: { model.beginPaintStroke() },
+            onPaintStrokeEnded: { model.endPaintStroke() }
         )
         .overlay(alignment: .topLeading) {
             // 凡例（モックに合わせる）
