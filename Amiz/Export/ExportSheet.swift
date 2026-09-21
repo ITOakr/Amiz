@@ -29,13 +29,9 @@ struct ExportSheet: View {
                     Toggle("図", isOn: $options.includesChart)
                     Toggle("目数表", isOn: $options.includesTable)
                     Toggle("凡例", isOn: $options.includesLegend)
-                    // 糸リストはフェーズ9（色）で有効にする
                     Toggle("糸リスト", isOn: $options.includesYarns)
-                        .disabled(true)
                 } header: {
                     Text("含める内容")
-                } footer: {
-                    Text("糸リストは色に対応してから選べるようになります。")
                 }
                 Section {
                     shareButton

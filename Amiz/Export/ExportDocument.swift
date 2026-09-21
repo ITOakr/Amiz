@@ -14,8 +14,8 @@ struct ExportOptions: Hashable {
     var includesChart = true
     var includesTable = true
     var includesLegend = true
-    /// 糸リストはフェーズ9で対応する
-    var includesYarns = false
+    /// 糸リスト（色見本・名前・メモ）を表紙に載せる
+    var includesYarns = true
 }
 
 /// 凡例の項目（図で使った記号だけ。domain-spec 13）
@@ -156,10 +156,15 @@ struct ExportDocument {
         return StitchTableFormatter.tableRows(for: trimmed, expansion: trimmedExpansion, warnings: warnings)
     }
 
+    /// 表紙に載せる糸リスト（糸が2本以上なら色が意味を持つ。1本でも名前・品番の控えになるので載せる）
+    var yarnList: [Yarn] {
+        options.includesYarns ? pattern.yarns : []
+    }
+
     /// ページの並び
     var pages: [ExportPage] {
         var pages: [ExportPage] = []
-        if options.includesChart || options.includesLegend {
+        if options.includesChart || options.includesLegend || !yarnList.isEmpty {
             pages.append(.cover)
         }
         if options.includesTable {

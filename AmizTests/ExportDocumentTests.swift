@@ -31,6 +31,25 @@ struct ExportDocumentTests {
         #expect(document.pages.map(\.id) == ["cover", "table.0"])
     }
 
+    @Test("糸リスト：含めると表紙に糸が載る。外すと載らず、図も凡例もなければ表紙自体がない")
+    func yarnList() {
+        let colored = ExportDocument(title: "くま", pattern: SamplePatterns.bearHeadColored, options: ExportOptions())
+        #expect(colored.yarnList.map(\.name) == ["生成り", "こげ茶", "白"])
+        #expect(colored.pages.first?.id == "cover")
+
+        var without = ExportOptions()
+        without.includesYarns = false
+        #expect(ExportDocument(title: "くま", pattern: SamplePatterns.bearHeadColored, options: without).yarnList.isEmpty)
+
+        var onlyYarns = ExportOptions()
+        onlyYarns.includesChart = false
+        onlyYarns.includesLegend = false
+        onlyYarns.includesTable = false
+        #expect(ExportDocument(title: "くま", pattern: SamplePatterns.bearHeadColored, options: onlyYarns).pages.map(\.id) == ["cover"])
+        onlyYarns.includesYarns = false
+        #expect(ExportDocument(title: "くま", pattern: SamplePatterns.bearHeadColored, options: onlyYarns).pages.isEmpty)
+    }
+
     @Test("ページ：くまの頭は表紙＋目数表1ページ。60段なら目数表が複数ページ。含める内容で変わる")
     func pages() {
         let bear = ExportDocument(title: "くまの頭", pattern: SamplePatterns.bearHead, options: ExportOptions())
