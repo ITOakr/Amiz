@@ -20,9 +20,10 @@ func color(_ hex: UInt32, alpha: CGFloat = 1) -> CGColor {
     CGColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
 }
 
+// 色はアプリの AppTheme（Assets.xcassets の Canvas / Ink / AccentColor）と同じ値にそろえる（ui-spec 1章）
 let palettes: [(name: String, palette: Palette)] = [
-    ("AppIcon.png", Palette(background: color(0xF3E9DA), ink: color(0x5A3A22), accent: color(0xC98A6B))),
-    ("AppIcon-dark.png", Palette(background: color(0x3B2A1E), ink: color(0xF3E9DA), accent: color(0xE0A88A))),
+    ("AppIcon.png", Palette(background: color(0xFBF8F4), ink: color(0x3B2A1E), accent: color(0xC97B63))),
+    ("AppIcon-dark.png", Palette(background: color(0x1C1714), ink: color(0xEDE3D1), accent: color(0xE0A088))),
     ("AppIcon-tinted.png", Palette(background: color(0xFFFFFF), ink: color(0x000000), accent: color(0x000000))),
 ]
 
