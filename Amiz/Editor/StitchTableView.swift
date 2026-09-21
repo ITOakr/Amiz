@@ -80,6 +80,9 @@ struct StitchTableView: View {
         return Button {
             if row.isMerged {
                 expandedRuns.insert(row.rowNumbers.lowerBound)
+            } else if model.isColorEditing {
+                // 色編集モード：段全体を塗る（ui-spec U21）
+                model.paintRow(at: row.rowNumbers.lowerBound - 1)
             } else {
                 model.beginEditingRow(at: row.rowNumbers.lowerBound - 1)
             }
@@ -113,9 +116,9 @@ struct StitchTableView: View {
         .buttonStyle(.plain)
         .listRowBackground(rowBackground(hasWarning: warning != nil, isEditing: isEditing))
         .accessibilityIdentifier("table.row.\(row.rowNumbers.lowerBound)")
-        // 段の長押しメニュー（U22）。まとめた行は展開してから
+        // 段の長押しメニュー（U22）。まとめた行は展開してから。色編集モード中は目の追加・削除をしない
         .contextMenu {
-            if !row.isMerged {
+            if !row.isMerged, !model.isColorEditing {
                 Button("この段を複製", systemImage: "plus.square.on.square") {
                     duplicateTarget = row.rowNumbers.lowerBound - 1
                 }

@@ -18,6 +18,11 @@ struct ChartView: View {
     var showsSeamMarks = false
     /// 目をタップしたとき（選択の操作はフェーズ4）
     var onTapStitch: ((LaidOutStitch) -> Void)?
+    /// なぞって塗る（色編集モード。ui-spec U21）。指定するとドラッグが移動ではなく塗りになる。
+    /// `onPaintStrokeBegan` / `Ended` はなぞりの始まりと終わり
+    var onPaint: ((LaidOutStitch) -> Void)?
+    var onPaintStrokeBegan: (() -> Void)?
+    var onPaintStrokeEnded: (() -> Void)?
 
     @State private var zoom: CGFloat = 1
     @State private var pan: CGSize = .zero
@@ -31,7 +36,10 @@ struct ChartView: View {
                 draw(in: &context, transform: transform)
             }
             .contentShape(Rectangle())
-            .gesture(dragGesture.simultaneously(with: magnifyGesture))
+            // ドラッグは通常は移動、色編集モードでは塗り（使わない方は無効にする）。ピンチはどちらでも使える
+            .gesture(dragGesture, including: onPaint == nil ? .all : .subviews)
+            .gesture(paintGesture(transform), including: onPaint == nil ? .subviews : .all)
+            .simultaneousGesture(magnifyGesture)
             .onTapGesture { location in
                 let unitPoint = transform.toUnit(location)
                 if let stitch = layout.nearestStitch(to: unitPoint, maxDistance: 0.6) {
@@ -78,6 +86,19 @@ struct ChartView: View {
                 pan.width += value.translation.width
                 pan.height += value.translation.height
             }
+    }
+
+    /// なぞって塗る：指の下に来た目を順に塗る（同じ目は続けて塗らない）
+    private func paintGesture(_ transform: ChartTransform) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if value.translation == .zero { onPaintStrokeBegan?() }
+                let unitPoint = transform.toUnit(value.location)
+                if let stitch = layout.nearestStitch(to: unitPoint, maxDistance: 0.6) {
+                    onPaint?(stitch)
+                }
+            }
+            .onEnded { _ in onPaintStrokeEnded?() }
     }
 
     private var magnifyGesture: some Gesture {
