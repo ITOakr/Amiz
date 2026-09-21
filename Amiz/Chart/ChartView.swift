@@ -53,7 +53,7 @@ struct ChartView: View {
                 fitButton
             }
         }
-        .background(Color(.systemBackground))
+        .background(AppTheme.canvas)
         .accessibilityIdentifier("chart")
     }
 
@@ -196,7 +196,7 @@ struct ChartPainter {
         for ring in layout.rings {
             let radius = ring.outerRadius * transform.unit
             let rect = CGRect(x: transform.origin.x - radius, y: transform.origin.y - radius, width: radius * 2, height: radius * 2)
-            context.stroke(Path(ellipseIn: rect), with: .color(.secondary.opacity(0.15)), lineWidth: 0.5)
+            context.stroke(Path(ellipseIn: rect), with: .color(AppTheme.guide), lineWidth: 0.5)
         }
 
         // 段の帯の補助線（平面図）：段の頭側に横線
@@ -207,7 +207,7 @@ struct ChartPainter {
                 var line = Path()
                 line.move(to: transform.toScreen(CGPoint(x: minX, y: band.topY)))
                 line.addLine(to: transform.toScreen(CGPoint(x: maxX, y: band.topY)))
-                context.stroke(line, with: .color(.secondary.opacity(0.15)), lineWidth: 0.5)
+                context.stroke(line, with: .color(AppTheme.guide), lineWidth: 0.5)
             }
         }
 
@@ -216,7 +216,7 @@ struct ChartPainter {
             let head = transform.toScreen(point)
             let root = CGPoint(x: head.x - transform.unit, y: head.y)
             let path = StitchSymbol.strokePath(kind: .chain, from: root, to: head, style: style)
-            context.stroke(path, with: .color(.primary), lineWidth: style.lineWidth)
+            context.stroke(path, with: .color(AppTheme.ink), lineWidth: style.lineWidth)
         }
 
         // 段の境目の区切り線（螺旋編み）：継ぎ目の角度に、段の内側から外側まで
@@ -245,16 +245,16 @@ struct ChartPainter {
                 let isCurrent = stitch.rowIndex == currentRowIndex
                 let yarnColor = pattern.yarn(for: stitch.yarnID).color
                 if isCurrent {
-                    StitchSymbol.draw(scaled, in: &context, color: .accentColor.opacity(0.35), style: haloStyle)
+                    StitchSymbol.draw(scaled, in: &context, color: AppTheme.accent.opacity(0.35), style: haloStyle)
                 }
                 // 白など明るい色は暗い輪郭を下に敷いて見分ける（domain-spec 30）
                 if yarnColor.isLight {
-                    StitchSymbol.draw(scaled, in: &context, color: .primary.opacity(0.45), style: outlineStyle)
+                    StitchSymbol.draw(scaled, in: &context, color: AppTheme.ink.opacity(0.45), style: outlineStyle)
                 }
                 StitchSymbol.draw(scaled, in: &context, color: Color(yarnColor), style: style)
             } else {
                 let isCurrent = stitch.rowIndex == currentRowIndex
-                StitchSymbol.draw(scaled, in: &context, color: isCurrent ? .accentColor : .primary, style: style)
+                StitchSymbol.draw(scaled, in: &context, color: isCurrent ? AppTheme.accent : AppTheme.ink, style: style)
             }
         }
 
@@ -282,7 +282,7 @@ struct ChartPainter {
         path.addLine(to: CGPoint(x: base.x + dy * size, y: base.y - dx * size))
         path.closeSubpath()
         context.fill(path, with: .color(Color(color)))
-        context.stroke(path, with: .color(.primary.opacity(color.isLight ? 0.7 : 0.35)), lineWidth: max(0.5, style.lineWidth * 0.5))
+        context.stroke(path, with: .color(AppTheme.ink.opacity(color.isLight ? 0.7 : 0.35)), lineWidth: max(0.5, style.lineWidth * 0.5))
     }
 
     private func drawRowNumbers(in context: inout GraphicsContext, style: StitchSymbol.Style) {
@@ -319,7 +319,7 @@ struct ChartPainter {
                 let resolved = context.resolve(text)
                 let size = resolved.measure(in: CGSize(width: 100, height: 100))
                 let background = CGRect(x: point.x - size.width / 2 - 1, y: point.y - size.height / 2, width: size.width + 2, height: size.height)
-                context.fill(Path(roundedRect: background, cornerRadius: 2), with: .color(Color(.systemBackground).opacity(0.8)))
+                context.fill(Path(roundedRect: background, cornerRadius: 2), with: .color(AppTheme.canvas.opacity(0.8)))
                 context.draw(resolved, at: point)
             }
         }

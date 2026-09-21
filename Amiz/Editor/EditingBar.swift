@@ -25,6 +25,6 @@ struct EditingBar: View {
         .font(.caption)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.accentColor.opacity(0.12))
+        .background(AppTheme.accent.opacity(0.12))
     }
 }

@@ -25,6 +25,7 @@ struct HomeView: View {
                     grid
                 }
             }
+            .background(AppTheme.canvas)
             .navigationTitle("作品")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -166,8 +167,8 @@ private struct WorkCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.secondarySystemBackground))
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius)
+                .fill(AppTheme.surface)
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
                     if let data = work.thumbnail, let image = ThumbnailRenderer.image(from: data) {
@@ -182,7 +183,7 @@ private struct WorkCard: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
             Text(work.name)
                 .font(.headline)
                 .lineLimit(1)

@@ -52,6 +52,6 @@ struct SelectionBar: View {
         .font(.caption)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.orange.opacity(0.12))
+        .background(AppTheme.selection.opacity(0.12))
     }
 }

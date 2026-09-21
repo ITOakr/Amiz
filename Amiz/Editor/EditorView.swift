@@ -58,6 +58,7 @@ struct EditorView: View {
                 compactLayout
             }
         }
+        .background(AppTheme.canvas)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .alert("修正の確認", isPresented: isConfirmationPresented) {
@@ -186,7 +187,7 @@ struct EditorView: View {
                 Spacer(minLength: 0)
             }
             .frame(width: 392)
-            .background(Color(.secondarySystemBackground))
+            .background(AppTheme.surface)
         }
     }
 
