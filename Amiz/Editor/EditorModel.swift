@@ -383,8 +383,34 @@ final class EditorModel {
 
     func toggleIncrease() { modifier.toggleIncrease() }
     func toggleDecrease() { modifier.toggleDecrease() }
+    func toggleCluster() { modifier.toggleCluster() }
     func toggleChainSpace() { modifier.toggleChainSpace() }
     func toggleUntilEnd() { modifier.toggleUntilEnd() }
+
+    /// 「ピコット」：直前の目にピコットを付ける（domain-spec 3・21）。付けられないときは何もしない
+    func pressPicot(chains: Int = 3) {
+        guard !isColorEditing else { return }
+        modifier = .none
+        if editingSession != nil {
+            editRow { session, _ in
+                if PatternInput.insertPicot(chains: chains, at: session.cursor, in: &session.row, yarnID: pattern.currentYarnID) {
+                    session.cursor += 1
+                }
+            }
+            return
+        }
+        mutate { pattern in
+            PatternInput.addPicot(chains: chains, to: &pattern)
+        }
+    }
+
+    /// いまピコットを付けられるか（直前に目があるか）
+    var canAddPicot: Bool {
+        if let session = editingSession {
+            return PatternInput.canInsertPicot(at: session.cursor, in: session.row)
+        }
+        return PatternInput.canAddPicot(in: pattern)
+    }
 
     /// 「飛ばす」（選択状態にならず、押すたびに1目飛ばす）
     func pressSkip() {
