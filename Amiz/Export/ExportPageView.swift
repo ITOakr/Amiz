@@ -211,6 +211,13 @@ private struct LegendSymbolView: View {
                 for dx in [-7.0, 7.0] {
                     context.stroke(StitchSymbol.strokePath(kind: kind, from: CGPoint(x: size.width / 2 + dx, y: size.height - 4), to: CGPoint(x: size.width / 2, y: 4), style: style, cross: .nearRoot), with: .color(color), lineWidth: style.lineWidth)
                 }
+            case .cluster(let kind, let count):
+                context.stroke(StitchSymbol.clusterPath(kind: kind, count: count, from: bottom, to: CGPoint(x: size.width / 2, y: 5), style: style), with: .color(color), lineWidth: style.lineWidth)
+            case .picot(let chains):
+                // 細編みの上にピコット
+                let scTop = CGPoint(x: size.width / 2, y: size.height / 2 + 2)
+                context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: bottom, to: scTop, style: style), with: .color(color), lineWidth: style.lineWidth)
+                context.stroke(StitchSymbol.picotPath(chains: chains, from: scTop, to: CGPoint(x: size.width / 2, y: 3), style: style), with: .color(color), lineWidth: style.lineWidth)
             case .chainSpace:
                 // 鎖2目のアーチと、その上に根元を離した細編み
                 let archY = size.height - 6

@@ -129,6 +129,19 @@ enum StitchSymbol {
             let root = virtualRoot(for: stitch, style: style)
             context.fill(fillPath(kind: .slipStitch, from: root, to: stitch.head, style: style), with: .color(color))
 
+        case .picot(let chains):
+            // 直前の目の頭（根元）の外側に、鎖 n 目の小さな輪
+            let anchor = stitch.bases.first ?? stitch.head
+            context.stroke(picotPath(chains: chains, from: anchor, to: stitch.head, style: style), with: .color(color), lineWidth: style.lineWidth)
+
+        case .regular where stitch.clusterCount > 1:
+            // 玉編み：根元1点から n 本の脚が上の短い横棒に向かって開く（JIS）。束なら根元を離す
+            var root = stitch.bases.first ?? virtualRoot(for: stitch, style: style)
+            if stitch.into == .chainSpace {
+                root = detached(root, toward: stitch.head, by: style.chainSpaceGap)
+            }
+            context.stroke(clusterPath(kind: stitch.kind, count: stitch.clusterCount, from: root, to: stitch.head, style: style), with: .color(color), lineWidth: style.lineWidth)
+
         case .regular:
             // 根元ごとに1本描く。n目一度は根元が複数あり、頭で集まる。
             // 束に編み入れた目は、根元を編み入れ先（アーチの中央）から少し離す（domain-spec 11）
@@ -159,6 +172,73 @@ enum StitchSymbol {
     // MARK: - 補助
 
     /// 根元がない目（鎖など）のために、向きから仮の根元を作る
+    /// 玉編み：根元1点から count 本の脚を、頭の短い横棒の上に等間隔に開いて描く。脚には目の種類の横棒が付く
+    static func clusterPath(kind: StitchKind, count: Int, from root: CGPoint, to head: CGPoint, style: Style) -> Path {
+        var path = Path()
+        let (d, n) = axes(from: root, to: head)
+        let spread = style.unit * 0.24
+        let half = CGFloat(count - 1) / 2
+        var headPoints: [CGPoint] = []
+        for index in 0..<count {
+            let offset = (CGFloat(index) - half) * spread
+            let top = head + n * offset
+            headPoints.append(top)
+            // 脚：横棒付きの縦線（中長は T、長は斜め1本、長々は2本）。頭の横棒は下でまとめて描く
+            path.addPath(legPath(kind: kind, from: root, to: top, style: style))
+        }
+        // 頭の横棒（脚の頭をつなぐ）
+        let bar = style.armLength * 0.6
+        if let first = headPoints.first, let last = headPoints.last {
+            path.move(to: first - n * bar)
+            path.addLine(to: last + n * bar)
+        }
+        _ = d
+        return path
+    }
+
+    /// 脚1本（縦線と、目の種類に応じた斜めの横棒。頭の横棒は付けない）
+    private static func legPath(kind: StitchKind, from root: CGPoint, to head: CGPoint, style: Style) -> Path {
+        var path = Path()
+        let (d, n) = axes(from: root, to: head)
+        path.move(to: root)
+        path.addLine(to: head)
+        let ticks: Int = switch kind {
+        case .doubleCrochet: 1
+        case .trebleCrochet: 2
+        default: 0
+        }
+        let length = distance(root, head)
+        let tick = style.armLength * 0.7
+        for index in 0..<ticks {
+            let center = root + d * (length * (0.45 + CGFloat(index) * 0.18))
+            path.move(to: center - n * tick + d * (tick * 0.5))
+            path.addLine(to: center + n * tick - d * (tick * 0.5))
+        }
+        return path
+    }
+
+    /// ピコット：根元（直前の目の頭）から先端へ向かう小さな輪。鎖 n 目ぶんの楕円を輪の上に並べる
+    static func picotPath(chains: Int, from anchor: CGPoint, to tip: CGPoint, style: Style) -> Path {
+        var path = Path()
+        let (d, _) = axes(from: anchor, to: tip)
+        let radius = style.unit * 0.2
+        let center = tip - d * radius
+        // 根元から輪の下端まで短い線
+        path.move(to: anchor)
+        path.addLine(to: center + d * (-radius))
+        // 輪の上に楕円を等間隔に（根元側を空けて）
+        let baseAngle = atan2(-d.y, -d.x)  // 根元の方向
+        for index in 0..<max(chains, 2) {
+            let angle = baseAngle + (CGFloat(index) + 1) * (2 * .pi / CGFloat(chains + 1))
+            let ovalCenter = CGPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius)
+            var oval = Path()
+            oval.addEllipse(in: ellipseRect(center: ovalCenter, size: CGSize(width: style.chainSize.width * 0.55, height: style.chainSize.height * 0.55)))
+            let tangent = CGPoint(x: -sin(angle), y: cos(angle))
+            path.addPath(rotated(oval, around: ovalCenter, direction: tangent))
+        }
+        return path
+    }
+
     /// 根元を頭の方へ `gap` だけ離した点（束に編み入れた目の根元）
     private static func detached(_ root: CGPoint, toward head: CGPoint, by gap: CGFloat) -> CGPoint {
         let d = distance(root, head)

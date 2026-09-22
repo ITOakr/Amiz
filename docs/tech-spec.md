@@ -88,7 +88,7 @@
 | `FoundationKind` | 作り目：`magicRing`／`chain(stitchCount:)`。値は「1段目に編む目数」 | domain 33 |
 | `Row` | 段。`id` と手順 `steps` | domain 21 |
 | `Step` | 手順の1操作。`id`、`kind`、糸（`yarnID`。nil は既定の糸） | domain 21、27 |
-| `StepKind` | 操作の種類：`turningChain`／`stitch`／`increase`／`decrease`／`skip`／`leaveRemaining`／`closeRound`／`repeatGroup` | domain 21 |
+| `StepKind` | 操作の種類：`turningChain`／`stitch`／`increase`／`decrease`／`cluster`（玉編み）／`picot`／`skip`／`leaveRemaining`／`closeRound`／`repeatGroup` | domain 2、3、21 |
 | `StitchKind` | 目の種類6つ。図での高さと立ち上がりの初期値を持つ | domain 1、6 |
 | `Placement` | 編み入れ先：`stitch`（前段の目の頭）／`chainSpace`（束） | domain 3 |
 | `RepeatCount` | 繰り返しの回数：`times(n)`／`untilEnd` | domain 15、17 |
@@ -104,7 +104,7 @@
 | 型 | 内容 | 対応する仕様 |
 |---|---|---|
 | `Expander` | 段の手順を展開する。前段の目の種類（鎖か）を受け取り、束の目は次のアーチを拾う。「段の終わりまで」は単位が収まる間だけ試しに展開して回数を決める。`Pattern.expanded()` が省略形 | domain 15、17、21 |
-| `ExpandedStitch` | 展開後の1目。どの操作から生まれたか（`StitchRef`）、種類、役割（普通／立ち上がり／段を閉じる引き抜き）、前段のどの目を拾ったか（`picks`。前段の編んだ順の番号。往復編みでは逆順に拾うので番号が下がる）、数えるか、糸 | domain 6、7、8、21、27 |
+| `ExpandedStitch` | 展開後の1目。どの操作から生まれたか（`StitchRef`）、種類、役割（普通／立ち上がり／段を閉じる引き抜き／ピコット）、前段のどの目を拾ったか（`picks`。前段の編んだ順の番号。往復編みでは逆順に拾うので番号が下がる）、数えるか、糸、玉編みの本数（`clusterCount`） | domain 2、3、6、7、8、21、27 |
 | `YarnChange` | 色替えの位置：新しい糸で編む最初の目、直前の目（ここで持ち替える）、新しい糸、段の最初か。`PatternExpansion.yarnChanges(in:)` で求める | domain 31 |
 | `RowExpansion` | 段の展開結果。目の列、拾った目数、前段の目数、「残りは編まない」の有無、繰り返しの実際の回数、問題（`issues`：段の終わりまでの単位が拾わない、アーチがないのに束、など）、逆順に拾う段か（`picksReversed`）。合計目数・鎖抜き目数・次に拾う目の番号（`nextPickIndex`）は計算プロパティ | domain 8、17、21、23 |
 | `PatternExpansion` | 編み図全体の展開結果（段ごとの `RowExpansion`） | |
@@ -112,7 +112,7 @@
 | `RowWarning` | 警告。段の位置、種類（不足／過多）、警告文 | domain 23、ui 5-4 |
 | `PatternEditor` | 段の編集（`RowEdit`：置き換え／削除／複製）の影響範囲を調べ（`EditImpact`）、「上の段を残す」「上の段をほどく」を適用する | domain 24、25、ui 7-1 |
 | `StitchTableFormatter` | 目数表の文章（手順文・目数の表記）と、同じ内容の段をまとめた行（`StitchTableRow`）を作る。日本語の文字列はここに置く（多言語化は今後の拡張） | domain 8、18、19、ui 5-4 |
-| `StitchModifier` | 先に選ぶボタンの状態（n目編み入れる／n目一度／束に／残りすべてに）。ボタンの切り替えルールと、目ボタンを押したときの `Step` への変換 | ui 5-6 |
+| `StitchModifier` | 先に選ぶボタンの状態（n目編み入れる／n目一度／玉編み／束に／残りすべてに）。ボタンの切り替えルールと、目ボタンを押したときの `Step` への変換 | ui 5-6 |
 | `PatternInput` | キーボードの操作を `Pattern` の変更に変換する純粋な関数（目を編む・立ち上がりの自動挿入・飛ばす・残りは編まない・1目削除・段を終える・繰り返しの終了・立ち上がりの手動設定・糸の持ち替え）。新しく入れる操作には今持っている糸を付ける。入力中の段は `rows` の最後の段 | ui 5-6、U17、domain 5、6、7、15、17、28 |
 | `PatternInput`（RowInput） | 段の指定した位置への入力（目・飛ばす・残りは編まないの挿入、入力位置の直前の削除、範囲の繰り返し化）。入力中の段への操作はこれの「末尾への入力」として実装。`ensureOpenRow` はほどいた後に空の段を足す | ui U16 |
 | `PatternInput`（StepEditing） | 選択した目（`StitchRef`）に対する編集：場所の検索、種類の変更、削除、繰り返しの解除（「段の終わりまで」は今の回数で展開し以後は追従しない）、指定した段の立ち上がりの目数、目の糸（繰り返しの中なら解除してから）、段全体の糸。どの段の操作にも使える | ui U15、U21、domain 15、27、28 |

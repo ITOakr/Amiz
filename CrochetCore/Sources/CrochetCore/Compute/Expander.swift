@@ -185,6 +185,29 @@ public enum Expander {
                 yarnID: step.yarnID
             ))
 
+        case .cluster(let kind, let count, let into):
+            // 玉編み：前段の1目（束ならアーチ）を拾い、1目と数える（domain-spec 2）
+            state.stitches.append(ExpandedStitch(
+                ref: state.ref(step, repetition: repetition),
+                kind: kind,
+                into: into,
+                picks: state.pick(for: kind, into: into, step: step),
+                isCounted: true,
+                yarnID: step.yarnID,
+                clusterCount: count
+            ))
+
+        case .picot(let chains):
+            // ピコット：前段を拾わず、数えない。図には描く（domain-spec 3・21）
+            state.stitches.append(ExpandedStitch(
+                ref: state.ref(step, repetition: repetition),
+                kind: .chain,
+                role: .picot(chains: chains),
+                picks: state.pick(0),
+                isCounted: false,
+                yarnID: step.yarnID
+            ))
+
         case .skip:
             _ = state.pick(1)
 
@@ -249,13 +272,13 @@ public enum Expander {
             switch step.kind {
             case .turningChain(_, let counted):
                 total + (counted ? 1 : 0)
-            case .stitch(let kind, _), .increase(let kind, _, _):
+            case .stitch(let kind, _), .increase(let kind, _, _), .cluster(let kind, _, _):
                 total + (kind.takesPreviousStitch ? 1 : 0)
             case .decrease(_, let count):
                 total + count
             case .skip:
                 total + 1
-            case .leaveRemaining, .closeRound:
+            case .leaveRemaining, .closeRound, .picot:
                 total
             case .repeatGroup(let unit, let count):
                 // 入れ子は使わない前提だが、回数固定なら計算できる。「段の終わりまで」の入れ子は 0 とみなす

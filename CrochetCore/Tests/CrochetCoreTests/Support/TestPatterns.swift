@@ -41,6 +41,27 @@ enum TestPatterns {
         return Pattern(method: .flat, foundation: .chain(stitchCount: 20), rows: Array(rows.prefix(count)))
     }
 
+    /// TC-13 玉編み：前段12目に「立ち上がり鎖2目（数える）、（鎖1目、中長編み3目の玉編み）×11、鎖1目、引き抜き」
+    static func tc13() -> Pattern {
+        afterRound(of: 12, row: Row(steps: [
+            .turningChain(2),
+            .repeating([.stitch(.chain), .cluster(.halfDoubleCrochet, count: 3)], times: 11),
+            .stitch(.chain),
+            .closeRound(),
+        ]))
+    }
+
+    /// TC-14 ピコット：前段12目に「細編み2目、ピコット、（細編み3目、ピコット）×3、細編み1目、引き抜き」
+    static func tc14() -> Pattern {
+        afterRound(of: 12, row: Row(steps: [
+            .turningChain(1),
+            .stitch(.singleCrochet), .stitch(.singleCrochet), .picot(),
+            .repeating(stitches(.singleCrochet, 3) + [.picot()], times: 3),
+            .stitch(.singleCrochet),
+            .closeRound(),
+        ]))
+    }
+
     /// TC-1 わの作り目からの輪編み（細編み）
     ///
     /// | 段 | 手順 | 目数 |

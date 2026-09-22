@@ -32,6 +32,11 @@ public enum StepKind: Hashable, Sendable {
     case increase(StitchKind, count: Int = 2, into: Placement = .stitch)
     /// n目一度（減らし目）。前段の count 目をまとめて1目にする（domain-spec 2）
     case decrease(StitchKind, count: Int = 2)
+    /// 玉編み。同じ編み入れ先に未完成の目を count 本編み、まとめて引き抜いて1目にする（domain-spec 2）。
+    /// 目の種類は中長編み・長編み・長々編み
+    case cluster(StitchKind, count: Int = 3, into: Placement = .stitch)
+    /// ピコット。鎖 chains 目を直前の目の頭に引き抜いた小さな輪。前段を拾わず、目数にも数えない（domain-spec 3・21）
+    case picot(chains: Int = 3)
     /// 前段の目を1目飛ばす（domain-spec 22）
     case skip
     /// 残りは編まない（domain-spec 23）
@@ -102,6 +107,16 @@ extension Step {
         Step(kind: .decrease(kind, count: count))
     }
 
+    /// 玉編み（count 本）
+    public static func cluster(_ kind: StitchKind, count: Int = 3, into placement: Placement = .stitch) -> Step {
+        Step(kind: .cluster(kind, count: count, into: placement))
+    }
+
+    /// ピコット（鎖 chains 目）
+    public static func picot(_ chains: Int = 3) -> Step {
+        Step(kind: .picot(chains: chains))
+    }
+
     /// 前段の目を1目飛ばす
     public static func skip() -> Step {
         Step(kind: .skip)
@@ -136,6 +151,8 @@ extension Step {
 //   {"id":"…","type":"stitch","stitch":"singleCrochet","into":"stitch"}
 //   {"id":"…","type":"increase","stitch":"singleCrochet","count":2,"into":"stitch"}
 //   {"id":"…","type":"decrease","stitch":"singleCrochet","count":2}
+//   {"id":"…","type":"cluster","stitch":"doubleCrochet","count":3,"into":"stitch"}
+//   {"id":"…","type":"picot","chains":3}
 //   {"id":"…","type":"skip"} / {"type":"leaveRemaining"} / {"type":"closeRound"}
 //   {"id":"…","type":"repeat","count":6,"unit":[…]}   （段の終わりまでは "count":"untilEnd"）
 //   糸を指定した操作は "yarn":"<糸のID>" が付く（既定の糸なら付かない）
@@ -146,7 +163,7 @@ extension Step: Codable {
     }
 
     private enum TypeName: String, Codable {
-        case turningChain, stitch, increase, decrease, skip, leaveRemaining, closeRound
+        case turningChain, stitch, increase, decrease, cluster, picot, skip, leaveRemaining, closeRound
         case repeatGroup = "repeat"
     }
 
@@ -178,6 +195,14 @@ extension Step: Codable {
                 try container.decode(StitchKind.self, forKey: .stitch),
                 count: try container.decode(Int.self, forKey: .count)
             )
+        case .cluster:
+            kind = .cluster(
+                try container.decode(StitchKind.self, forKey: .stitch),
+                count: try container.decode(Int.self, forKey: .count),
+                into: try container.decodeIfPresent(Placement.self, forKey: .into) ?? .stitch
+            )
+        case .picot:
+            kind = .picot(chains: try container.decode(Int.self, forKey: .chains))
         case .skip:
             kind = .skip
         case .leaveRemaining:
@@ -217,6 +242,14 @@ extension Step: Codable {
             try container.encode(TypeName.decrease, forKey: .type)
             try container.encode(stitchKind, forKey: .stitch)
             try container.encode(count, forKey: .count)
+        case .cluster(let stitchKind, let count, let placement):
+            try container.encode(TypeName.cluster, forKey: .type)
+            try container.encode(stitchKind, forKey: .stitch)
+            try container.encode(count, forKey: .count)
+            try container.encode(placement, forKey: .into)
+        case .picot(let chains):
+            try container.encode(TypeName.picot, forKey: .type)
+            try container.encode(chains, forKey: .chains)
         case .skip:
             try container.encode(TypeName.skip, forKey: .type)
         case .leaveRemaining:

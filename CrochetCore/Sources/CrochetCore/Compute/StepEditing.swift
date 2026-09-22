@@ -55,7 +55,11 @@ extension PatternInput {
             newKind = .increase(kind, count: count, into: into)
         case .decrease(_, let count):
             newKind = .decrease(kind, count: count)
-        case .turningChain, .skip, .leaveRemaining, .closeRound, .repeatGroup:
+        case .cluster(_, let count, let into):
+            // 玉編みは中長・長・長々の間でだけ変えられる
+            guard kind.canBeClustered else { return false }
+            newKind = .cluster(kind, count: count, into: into)
+        case .turningChain, .picot, .skip, .leaveRemaining, .closeRound, .repeatGroup:
             return false
         }
         replaceStep(at: location, with: Step(id: step.id, kind: newKind, yarnID: step.yarnID), in: &pattern)

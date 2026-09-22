@@ -89,11 +89,11 @@ extension PatternInput {
             switch step.kind {
             case .turningChain:
                 true
-            case .stitch(let kind, _), .increase(let kind, _, _), .decrease(let kind, _):
+            case .stitch(let kind, _), .increase(let kind, _, _), .decrease(let kind, _), .cluster(let kind, _, _):
                 kind != .chain
             case .repeatGroup(let unit, _):
                 hasNonChainStitch(Row(steps: unit))
-            case .skip, .leaveRemaining, .closeRound:
+            case .skip, .leaveRemaining, .closeRound, .picot:
                 false
             }
         }
@@ -102,8 +102,28 @@ extension PatternInput {
     /// 繰り返しの単位に入れられる操作か（立ち上がり・段を閉じる引き抜き・残りは編まない・入れ子は不可）
     static func canBeInRepeatUnit(_ step: Step) -> Bool {
         switch step.kind {
-        case .stitch, .increase, .decrease, .skip: true
+        case .stitch, .increase, .decrease, .cluster, .picot, .skip: true
         case .turningChain, .closeRound, .leaveRemaining, .repeatGroup: false
         }
+    }
+
+    /// ピコットを付けられる位置か：直前に目（鎖・引き抜き・普通の目・増し目・減らし目・玉編み・繰り返し）があること。
+    /// 段の先頭や立ち上がりの直後、飛ばすの直後には付けられない（domain-spec 21）
+    static func canInsertPicot(at index: Int, in row: Row) -> Bool {
+        guard index > 0, row.steps.indices.contains(index - 1) else { return false }
+        switch row.steps[index - 1].kind {
+        case .stitch, .increase, .decrease, .cluster, .repeatGroup: return true
+        case .turningChain, .skip, .leaveRemaining, .closeRound, .picot: return false
+        }
+    }
+
+    /// 段の `index` の位置にピコットを入れる。直前に目がなければ入れない
+    /// - Returns: 入れたか
+    @discardableResult
+    public static func insertPicot(chains: Int = 3, at index: Int, in row: inout Row, yarnID: UUID? = nil) -> Bool {
+        let position = min(max(index, 0), row.steps.count)
+        guard (2...5).contains(chains), canInsertPicot(at: position, in: row) else { return false }
+        row.steps.insert(Step.picot(chains).withYarn(yarnID), at: position)
+        return true
     }
 }

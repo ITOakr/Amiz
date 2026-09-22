@@ -12,6 +12,8 @@ public struct ExpandedStitch: Hashable, Sendable {
         case turningChain(chains: Int)
         /// 段を閉じる引き抜き（domain-spec 7）
         case closingSlipStitch
+        /// ピコット（鎖の目数を持つ）。直前の目の頭に付く飾りで、数えない（domain-spec 3・21）
+        case picot(chains: Int)
     }
 
     /// どの操作から生まれたか
@@ -30,6 +32,8 @@ public struct ExpandedStitch: Hashable, Sendable {
     public var isCounted: Bool
     /// 糸（操作の糸。nil なら既定の糸。domain-spec 27）
     public var yarnID: UUID?
+    /// 玉編みの本数（普通の目は 1。domain-spec 2）
+    public var clusterCount: Int
 
     public init(
         ref: StitchRef,
@@ -38,7 +42,8 @@ public struct ExpandedStitch: Hashable, Sendable {
         into: Placement = .stitch,
         picks: Range<Int>,
         isCounted: Bool,
-        yarnID: UUID? = nil
+        yarnID: UUID? = nil,
+        clusterCount: Int = 1
     ) {
         self.ref = ref
         self.kind = kind
@@ -47,6 +52,7 @@ public struct ExpandedStitch: Hashable, Sendable {
         self.picks = picks
         self.isCounted = isCounted
         self.yarnID = yarnID
+        self.clusterCount = clusterCount
     }
 
     /// 「鎖を除いた目数」から除く目か。普通の鎖編みだけを除き、数える立ち上がりは含める（domain-spec 8）
