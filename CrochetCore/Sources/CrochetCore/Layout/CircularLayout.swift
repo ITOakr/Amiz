@@ -216,12 +216,13 @@ public enum CircularLayout {
                 start = b
                 finish = a
             case (let b?, nil):
-                // 段の終わり：閉じた段なら最初の目まで、入力中なら前段の1目分先まで
+                // 段の終わり：閉じた段なら最初の目まで均等に。入力中なら鎖1つにつき前段の1目分ずつ先へ
+                // （1目分に詰めると、アーチの鎖を入力している途中で記号が重なる。AMIZ-58）
                 start = b
                 if isClosed, let first = angles.first ?? nil {
                     finish = first + 2 * Double.pi
                 } else {
-                    finish = b + previousStep
+                    finish = b + previousStep * Double(runLength + 1)
                 }
             case (nil, let a?):
                 start = a - previousStep

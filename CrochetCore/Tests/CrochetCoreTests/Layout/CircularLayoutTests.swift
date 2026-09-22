@@ -293,3 +293,33 @@ struct ChainSpaceLayoutTests {
         #expect(row2[0].sharedBaseCount == 3)
     }
 }
+
+/// 入力中の段の末尾の鎖（AMIZ-58）
+@Suite("入力中の段の末尾の鎖")
+struct TrailingChainLayoutTests {
+    @Test("段の終わりに続く鎖は、前段の1目分ずつ進めて置く（1目分に詰めて重ねない）")
+    func trailingChainsSpread() {
+        var pattern = TestPatterns.tc1()
+        pattern.rows = Array(pattern.rows.prefix(1))  // 6目
+        // 入力中：細編み1目、鎖4目（次の目はまだ）
+        pattern.rows.append(Row(steps: [.turningChain(1), .stitch(.singleCrochet)] + TestPatterns.stitches(.chain, 4)))
+        let layout = pattern.circularLayout()
+        let chains = layout.stitches.filter { $0.rowIndex == 1 && $0.kind == .chain && $0.role == .regular }
+        #expect(chains.count == 4)
+        let step = 2 * Double.pi / 6  // 前段の1目分
+        for (a, b) in zip(chains, chains.dropFirst()) {
+            var diff = b.polarAngle - a.polarAngle
+            while diff < 0 { diff += 2 * .pi }
+            #expect(abs(diff - step) < 0.01)
+        }
+        // 閉じた段（段を終えた後）は最初の目まで均等（前段 6 目に対して 1 + 4 = 5 目なので 72° 間隔）
+        pattern.rows[1].steps.append(.closeRound())
+        let closed = pattern.circularLayout()
+        let closedHeads = closed.stitches.filter { $0.rowIndex == 1 && $0.countedIndex != nil }
+        for (a, b) in zip(closedHeads, closedHeads.dropFirst()) {
+            var diff = b.polarAngle - a.polarAngle
+            while diff < 0 { diff += 2 * .pi }
+            #expect(abs(diff - 2 * Double.pi / 5) < 0.01)
+        }
+    }
+}
