@@ -17,10 +17,16 @@ struct HomeView: View {
     @State private var deletingWork: Work?
     /// 保存や読み込みに失敗したときに出す文（AMIZ-68）
     @State private var errorMessage: String?
+    /// 保存先を開けなかったときの説明（AMIZ-69）。帯で出し、閉じられる
+    @Environment(\.storeWarning) private var storeWarning
+    @State private var hasDismissedStoreWarning = false
 
     var body: some View {
         NavigationStack(path: $path) {
-            Group {
+            VStack(spacing: 0) {
+                if let storeWarning, !hasDismissedStoreWarning {
+                    storeWarningBanner(storeWarning)
+                }
                 if works.isEmpty {
                     emptyState
                 } else {
@@ -138,6 +144,24 @@ struct HomeView: View {
 
     private enum Destination: Hashable {
         case settings
+    }
+
+    /// 保存先を開けなかったときの帯（AMIZ-69）
+    private func storeWarningBanner(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.warning)
+            Text(text)
+                .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button("閉じる", systemImage: "xmark") { hasDismissedStoreWarning = true }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(AppTheme.warning.opacity(0.1))
+        .accessibilityIdentifier("home.storeWarning")
     }
 
     /// 作品が1つもないとき（ui-spec 3）
