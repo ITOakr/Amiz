@@ -9,12 +9,21 @@ import CrochetCore
 enum ThumbnailRenderer {
     /// サムネイルの一辺（pt）。表示は 2 倍で描く
     static let side: CGFloat = 160
+    /// これ以上の目があれば間引いて描く（小さい画像なので形は分かる。AMIZ-70）
+    static let thinningThreshold = 1200
+
+    /// 目の数に応じた間引きの間隔（1 なら全部描く）
+    static func stride(forStitchCount count: Int) -> Int {
+        count <= thinningThreshold ? 1 : Int((Double(count) / Double(thinningThreshold)).rounded(.up))
+    }
 
     /// 編み図からサムネイルの PNG を作る。目がなければ nil
     static func png(for pattern: Pattern) -> Data? {
         let layout = pattern.chartLayout()
         guard !layout.stitches.isEmpty || !layout.foundationChain.isEmpty else { return nil }
-        let renderer = ImageRenderer(content: ThumbnailView(pattern: pattern, layout: layout))
+        let renderer = ImageRenderer(content: ThumbnailView(
+            pattern: pattern, layout: layout, stitchStride: stride(forStitchCount: layout.stitches.count)
+        ))
         renderer.scale = 2
         guard let image = renderer.cgImage else { return nil }
         let data = NSMutableData()
@@ -36,6 +45,7 @@ enum ThumbnailRenderer {
 private struct ThumbnailView: View {
     let pattern: Pattern
     let layout: ChartLayout
+    let stitchStride: Int
 
     var body: some View {
         Canvas { context, size in
@@ -43,6 +53,8 @@ private struct ThumbnailView: View {
             var painter = ChartPainter(layout: layout, transform: transform)
             painter.showsRowNumbers = false
             painter.pattern = pattern
+            painter.stitchStride = stitchStride
+            painter.showsGuides = false
             painter.draw(in: &context)
         }
         .frame(width: ThumbnailRenderer.side, height: ThumbnailRenderer.side)

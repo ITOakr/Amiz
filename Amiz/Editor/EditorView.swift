@@ -11,8 +11,9 @@ struct EditorView: View {
     @State private var model: EditorModel
     /// 作品名（ツールバーに表示）
     let title: String
-    /// 編み図が変わったときに呼ぶ（自動保存。tech-spec 6）。保存できなければ理由を返す。確認用の作品では nil
-    private let onPatternChange: ((Pattern) -> Error?)?
+    /// 編み図が変わったときに呼ぶ（自動保存。tech-spec 6）。2つめの引数はサムネイルも作り直すか。
+    /// 保存できなければ理由を返す。確認用の作品では nil
+    private let onPatternChange: ((Pattern, Bool) -> Error?)?
     /// 保存に失敗した理由（一度だけ知らせる。AMIZ-68）
     @State private var saveErrorMessage: String?
     @State private var hasReportedSaveError = false
@@ -38,18 +39,18 @@ struct EditorView: View {
         case table = "目数表"
     }
 
-    init(model: EditorModel = EditorModel(), title: String = "新しい作品", onPatternChange: ((Pattern) -> Error?)? = nil) {
+    init(model: EditorModel = EditorModel(), title: String = "新しい作品", onPatternChange: ((Pattern, Bool) -> Error?)? = nil) {
         _model = State(initialValue: model)
         self.title = title
         self.onPatternChange = onPatternChange
     }
 
-    /// 保存済みの作品を開く（読み込みに成功した編み図を渡す）。編み図が変わるたびに作品へ自動保存する
+    /// 保存済みの作品を開く（読み込みに成功した編み図を渡す）。編み図が変わるたびに作品へ自動保存する。
+    /// サムネイルは重い（5000目で約0.7秒）ので入力中は作らず、画面を閉じるときだけ作る（AMIZ-70）
     init(work: Work, pattern: Pattern) {
-        self.init(model: EditorModel(pattern: pattern), title: work.name) { pattern in
+        self.init(model: EditorModel(pattern: pattern), title: work.name) { pattern, makesThumbnail in
             do {
-                // サムネイルは保存のたびに作り直す（ui-spec 3）
-                try work.save(pattern: pattern, thumbnail: ThumbnailRenderer.png(for: pattern))
+                try work.save(pattern: pattern, thumbnail: makesThumbnail ? ThumbnailRenderer.png(for: pattern) : nil)
                 return nil
             } catch {
                 return error
@@ -112,9 +113,9 @@ struct EditorView: View {
             Text(saveErrorMessage ?? "")
         }
         .onDisappear {
-            // 画面を閉じるときは待たずに保存する
+            // 画面を閉じるときは待たずに保存し、ここでだけサムネイルを作り直す（AMIZ-70）
             saveTask?.cancel()
-            _ = onPatternChange?(model.pattern)
+            _ = onPatternChange?(model.pattern, true)
         }
     }
 
@@ -148,7 +149,8 @@ struct EditorView: View {
         saveTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
-            if let error = onPatternChange(pattern) {
+            // 入力中はサムネイルを作らない（重いので。画面を閉じるときに作る）
+            if let error = onPatternChange(pattern, false) {
                 if !hasReportedSaveError {
                     hasReportedSaveError = true
                     saveErrorMessage = error.localizedDescription

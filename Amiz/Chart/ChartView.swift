@@ -187,6 +187,10 @@ struct ChartPainter {
     var yarnChanges: [YarnChange] = []
     /// 背景が暗いか（ダークモード）。暗い糸に輪郭を付ける判定に使う。書き出しは白地なので false
     var isDarkBackground = false
+    /// 何目に1目だけ描くか（サムネイルのように小さく描くとき、目が多い作品を間引いて速くする。1 なら全部描く）
+    var stitchStride = 1
+    /// 段の輪・帯の補助線を描くか（サムネイルでは記号より目立ってしまうので描かない）
+    var showsGuides = true
 
     /// 糸の色で描くか（糸が2本以上の作品）
     private var usesYarnColors: Bool {
@@ -197,14 +201,14 @@ struct ChartPainter {
         let style = StitchSymbol.Style(unit: transform.unit, lineWidth: max(1, min(2, transform.unit * 0.11)))
 
         // 段の輪の補助線（円形図）
-        for ring in layout.rings {
+        for ring in layout.rings where showsGuides {
             let radius = ring.outerRadius * transform.unit
             let rect = CGRect(x: transform.origin.x - radius, y: transform.origin.y - radius, width: radius * 2, height: radius * 2)
             context.stroke(Path(ellipseIn: rect), with: .color(AppTheme.guide), lineWidth: 0.5)
         }
 
         // 段の帯の補助線（平面図）：段の頭側に横線
-        if let first = layout.bands.first {
+        if showsGuides, let first = layout.bands.first {
             let minX = layout.bounds.minX + 1
             let maxX = layout.bounds.maxX - 1
             for band in layout.bands + [RowBand(rowIndex: -1, baseY: first.baseY, topY: first.baseY, direction: 0, seamX: 0)] {
@@ -239,7 +243,9 @@ struct ChartPainter {
         let highlightStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 2.2)
         let outlineStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 1.7)
         let haloStyle = StitchSymbol.Style(unit: style.unit, lineWidth: style.lineWidth * 3.2)
-        for stitch in layout.stitches {
+        for (index, stitch) in layout.stitches.enumerated() {
+            // 間引くのは普通の目だけ（立ち上がり・引き抜き・ピコットは数が少なく、抜けると形が分かりにくい）
+            if stitchStride > 1, stitch.role == .regular, index % stitchStride != 0 { continue }
             let scaled = transform.apply(to: stitch)
             if let highlighted, stitch.ref == highlighted.ref {
                 StitchSymbol.draw(scaled, in: &context, color: .red, style: highlightStyle)
