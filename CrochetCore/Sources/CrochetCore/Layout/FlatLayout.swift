@@ -146,7 +146,7 @@ public enum FlatLayout {
 
     // MARK: - 頭の x
 
-    /// 数える目の頭の x と、同じ根元を共有する目の数を決める
+    /// 数える目の頭の x と、同じ根元を共有する目の数を決める（並べ方の本体は `StitchPlacement`）
     /// - Parameters:
     ///   - followsBases: true なら入力中の段として前段の真上に置く。false なら終わった段として等間隔に並べる
     ///   - startX: 前段の終わりの端（根元のある目が1つもないときの並びの基準）
@@ -156,86 +156,31 @@ public enum FlatLayout {
         let count = counted.count
         guard count > 0 else { return ([], []) }
 
-        // 同じ編み入れ先を共有する続きの目（増し目）のまとまりの大きさ
-        var groupSizes = [Int](repeating: 1, count: count)
-        var groupStart = 0
-        while groupStart < count {
-            var end = groupStart
-            if !baseXs[groupStart].isEmpty {
-                while end + 1 < count, counted[end + 1].picks == counted[groupStart].picks, !baseXs[end + 1].isEmpty {
-                    end += 1
-                }
-            }
-            for stitchIndex in groupStart...end {
-                groupSizes[stitchIndex] = end - groupStart + 1
-            }
-            groupStart = end + 1
-        }
+        let groupSizes = StitchPlacement.groupSizes(for: counted, bases: baseXs)
 
-        // 終わった段：等間隔。ずれは頭と根元のずれの平均が 0 になるように
+        // 終わった段：1目 1.0 の等間隔。ずれは頭と根元のずれの平均が 0 になるように
         if !followsBases {
-            var offsets: [Double] = []
-            for (index, bases) in baseXs.enumerated() where !bases.isEmpty {
-                offsets.append(mean(bases) - direction * Double(index))
-            }
-            let offset = offsets.isEmpty ? startX : mean(offsets)
-            return ((0..<count).map { offset + direction * Double($0) }, groupSizes)
+            let xs = StitchPlacement.evenlySpaced(bases: baseXs, step: direction, fallbackOffset: startX, mean: mean)
+            return (xs, groupSizes)
         }
 
-        var xs = [Double?](repeating: nil, count: count)
-
-        // 入力中の段：根元のある目は、まとまりごとに前段の1目分の幅の中で均等に広げる
-        var index = 0
-        while index < count {
-            guard !baseXs[index].isEmpty else {
-                index += 1
-                continue
-            }
-            let groupSize = groupSizes[index]
-            let end = index + groupSize - 1
-            let base = mean(baseXs[index])
-            for (position, stitchIndex) in (index...end).enumerated() {
-                xs[stitchIndex] = base + direction * ((Double(position) + 0.5) / Double(groupSize) - 0.5)
-            }
-            index = end + 1
-        }
-
-        // 根元のない目（鎖）：前後の根元のある目の間に均等に並べる
-        index = 0
-        while index < count {
-            guard xs[index] == nil else {
-                index += 1
-                continue
-            }
-            var end = index
-            while end + 1 < count, xs[end + 1] == nil {
-                end += 1
-            }
-            let runLength = end - index + 1
-            let before = index > 0 ? xs[index - 1] : nil
-            let after = end + 1 < count ? xs[end + 1] : nil
-            let (start, finish): (Double, Double)
-            switch (before, after) {
-            case (let b?, let a?):
-                start = b
-                finish = a
-            case (let b?, nil):
-                start = b
-                finish = b + direction * Double(runLength)
-            case (nil, let a?):
-                start = a - direction * Double(runLength)
-                finish = a
-            case (nil, nil):
-                start = startX - direction * 0.5
-                finish = start + direction * Double(runLength)
-            }
-            for (position, stitchIndex) in (index...end).enumerated() {
-                xs[stitchIndex] = start + (finish - start) * (Double(position) + 1) / Double(runLength + 1)
-            }
-            index = end + 1
-        }
-
+        // 入力中の段：根元のある目は前段の真上、鎖は前後の目の間に
+        let options = placementOptions(direction: direction, startX: startX)
+        var xs = StitchPlacement.followingBases(bases: baseXs, groupSizes: groupSizes, options: options)
+        StitchPlacement.fillRunsWithoutBase(&xs, isClosed: false, options: options)
         return (xs.map { $0 ?? 0 }, groupSizes)
+    }
+
+    /// 平面図での並べ方（x。1目 1.0 で、向きは段ごとに反転する）
+    private static func placementOptions(direction: Double, startX: Double) -> StitchPlacement.Options {
+        StitchPlacement.Options(
+            previousStep: direction,
+            mean: mean,
+            trailingStep: direction,
+            leadingSpan: { runLength in direction * Double(runLength) },
+            closedWrap: nil,
+            fallbackStart: startX - direction * 0.5
+        )
     }
 
     // MARK: - 補助
@@ -266,16 +211,7 @@ public enum FlatLayout {
 
     /// 描くときの長さ（鎖○目分）
     static func drawHeight(of stitch: ExpandedStitch, options: Options) -> Double {
-        switch stitch.role {
-        case .turningChain(let chains):
-            Double(chains)
-        case .closingSlipStitch:
-            options.lowStitchHeight
-        case .picot:
-            0
-        case .regular:
-            stitch.kind.heightInChains == 0 ? options.lowStitchHeight : Double(stitch.kind.heightInChains)
-        }
+        stitch.drawHeight(lowStitchHeight: options.lowStitchHeight)
     }
 
     /// 前段の目の頭の x。拾いすぎ（範囲外・負の番号）は同じ間隔で先へ続いたとみなす
