@@ -55,7 +55,7 @@ final class EditorSmokeUITests: XCTestCase {
         app.buttons["modifier.increase"].tap()
         singleCrochet.tap()
         app.buttons["op.endRepeat"].tap()
-        let repeatSix = app.alerts.buttons["×6で繰り返す"]
+        let repeatSix = app.alerts.buttons["この回数で繰り返す"]
         XCTAssertTrue(repeatSix.waitForExistence(timeout: 2))
         repeatSix.tap()
         XCTAssertTrue(app.staticTexts["3段目・この段 18目"].waitForExistence(timeout: 2))
@@ -220,7 +220,7 @@ final class EditorSmokeUITests: XCTestCase {
         app.buttons["modifier.increase"].tap()
         singleCrochet.tap()
         app.buttons["op.endRepeat"].tap()
-        let repeatSix = app.alerts.buttons["×6で繰り返す"]
+        let repeatSix = app.alerts.buttons["この回数で繰り返す"]
         XCTAssertTrue(repeatSix.waitForExistence(timeout: 2))
         repeatSix.tap()
         app.buttons["op.finishRow"].tap()

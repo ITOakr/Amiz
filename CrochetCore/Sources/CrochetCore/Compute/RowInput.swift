@@ -109,7 +109,7 @@ extension PatternInput {
 
     /// ピコットを付けられる位置か：直前に目（鎖・引き抜き・普通の目・増し目・減らし目・玉編み・繰り返し）があること。
     /// 段の先頭や立ち上がりの直後、飛ばすの直後には付けられない（domain-spec 21）
-    static func canInsertPicot(at index: Int, in row: Row) -> Bool {
+    public static func canInsertPicot(at index: Int, in row: Row) -> Bool {
         guard index > 0, row.steps.indices.contains(index - 1) else { return false }
         switch row.steps[index - 1].kind {
         case .stitch, .increase, .decrease, .cluster, .repeatGroup: return true

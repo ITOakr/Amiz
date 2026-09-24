@@ -22,14 +22,15 @@ struct StitchKeyboardView: View {
             modifierGroup
             rowOperationGroup
         }
-        .environment(\.keyboardButtonHeight, isLarge ? 60 : 48)
+        .environment(\.keyboardButtonHeight, isLarge ? 60 : 44)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(AppTheme.surface)
         .alert("繰り返し", isPresented: $isRepeatEndPresented) {
             TextField("回数", text: $repeatCountText)
                 .keyboardType(.numberPad)
-            Button("×\(repeatCount)で繰り返す") {
+            // アラートのボタンの文字は出した時点で固定されるので、回数を含めない（AMIZ-65）
+            Button("この回数で繰り返す") {
                 model.pressEndRepeat(count: .times(repeatCount))
             }
             if model.canEndRepeatUntilEnd {
@@ -86,7 +87,7 @@ struct StitchKeyboardView: View {
                         Text(kind.japaneseName)
                             .font(isLarge ? .subheadline : .caption)
                     }
-                    .frame(maxWidth: .infinity, minHeight: isLarge ? 96 : 64)
+                    .frame(maxWidth: .infinity, minHeight: isLarge ? 96 : 56)
                 }
                 .buttonStyle(.soft)
                 .accessibilityIdentifier("stitch.\(kind.rawValue)")
@@ -106,15 +107,16 @@ struct StitchKeyboardView: View {
                 model.toggleDecrease()
             }
             .accessibilityIdentifier("modifier.decrease")
+            // 玉編み（domain-spec 2）。押すたびに 3→4→5→2→解除。中長・長・長々を押したときだけ効く
+            ModifierButton(title: clusterTitle, isSelected: isClusterSelected) {
+                model.toggleCluster()
+            }
+            .accessibilityIdentifier("modifier.cluster")
             // 束に編み入れる（鎖のアーチをすくう。domain-spec 21）。「2目一度」とは同時に選べない
             ModifierButton(title: "束に", isSelected: model.modifier.chainSpace) {
                 model.toggleChainSpace()
             }
             .accessibilityIdentifier("modifier.chainSpace")
-            ModifierButton(title: "飛ばす", isSelected: false) {
-                model.pressSkip()
-            }
-            .accessibilityIdentifier("modifier.skip")
             ModifierButton(title: "残りすべてに", isSelected: model.modifier.untilEnd) {
                 model.toggleUntilEnd()
             }
@@ -138,45 +140,77 @@ struct StitchKeyboardView: View {
         if case .decrease(let count) = model.modifier.group { "\(count)目一度" } else { "2目一度" }
     }
 
-    // MARK: - グループ3：段の操作
+    private var isClusterSelected: Bool {
+        if case .cluster = model.modifier.group { true } else { false }
+    }
+
+    private var clusterTitle: String {
+        if case .cluster(let count) = model.modifier.group { "\(count)目の玉編み" } else { "玉編み" }
+    }
+
+    // MARK: - グループ3：段の操作（2行。ui-spec 5-6）
 
     private var rowOperationGroup: some View {
-        HStack(spacing: 10) {
-            OperationButton(title: "繰り返し開始") {
-                model.pressBeginRepeat()
-            }
-            .disabled(model.isRepeating)
-            .accessibilityIdentifier("op.beginRepeat")
-
-            OperationButton(title: "繰り返し終了") {
-                isRepeatEndPresented = true
-            }
-            .disabled(!(model.pendingRepeatUnit?.isEmpty == false))
-            .accessibilityIdentifier("op.endRepeat")
-
-            OperationButton(title: "段を終える") {
-                finishRow()
-            }
-            .disabled(model.editingSession != nil)
-            .accessibilityIdentifier("op.finishRow")
-
-            OperationButton(title: "1目削除") {
-                model.pressDeleteLast()
-            }
-            .accessibilityIdentifier("op.deleteLast")
-
-            Menu {
-                ForEach(1...4, id: \.self) { chains in
-                    Button("鎖\(chains)目") {
-                        model.pressTurningChain(chains: chains)
-                    }
+        VStack(spacing: isLarge ? 12 : 10) {
+            HStack(spacing: 10) {
+                ModifierButton(title: "飛ばす", isSelected: false) {
+                    model.pressSkip()
                 }
-            } label: {
-                OperationLabel(title: "立ち上がり")
+                .accessibilityIdentifier("modifier.skip")
+
+                // ピコット（domain-spec 3）。押すと鎖3目。長押しで鎖の目数。直前に目がなければ押せない
+                Menu {
+                    ForEach(2...5, id: \.self) { chains in
+                        Button("鎖\(chains)目のピコット") {
+                            model.pressPicot(chains: chains)
+                        }
+                    }
+                } label: {
+                    OperationLabel(title: "ピコット")
+                } primaryAction: {
+                    model.pressPicot()
+                }
+                .buttonStyle(.soft)
+                .disabled(!model.canAddPicot)
+                .accessibilityIdentifier("op.picot")
+
+                Menu {
+                    ForEach(1...4, id: \.self) { chains in
+                        Button("鎖\(chains)目") {
+                            model.pressTurningChain(chains: chains)
+                        }
+                    }
+                } label: {
+                    OperationLabel(title: "立ち上がり")
+                }
+                .buttonStyle(.soft)
+                .disabled(!model.pattern.method.usesTurningChain)
+                .accessibilityIdentifier("op.turningChain")
+
+                OperationButton(title: "1目削除") {
+                    model.pressDeleteLast()
+                }
+                .accessibilityIdentifier("op.deleteLast")
             }
-            .buttonStyle(.soft)
-            .disabled(!model.pattern.method.usesTurningChain)
-            .accessibilityIdentifier("op.turningChain")
+            HStack(spacing: 10) {
+                OperationButton(title: "繰り返し開始") {
+                    model.pressBeginRepeat()
+                }
+                .disabled(model.isRepeating)
+                .accessibilityIdentifier("op.beginRepeat")
+
+                OperationButton(title: "繰り返し終了") {
+                    isRepeatEndPresented = true
+                }
+                .disabled(!(model.pendingRepeatUnit?.isEmpty == false))
+                .accessibilityIdentifier("op.endRepeat")
+
+                OperationButton(title: "段を終える") {
+                    finishRow()
+                }
+                .disabled(model.editingSession != nil)
+                .accessibilityIdentifier("op.finishRow")
+            }
         }
     }
 
