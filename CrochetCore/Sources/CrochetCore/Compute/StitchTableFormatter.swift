@@ -67,6 +67,10 @@ public enum StitchTableFormatter {
             placementPrefix(into) + "\(kind.instructionName)\(count)目編み入れる"
         case .decrease(let kind, let count):
             "\(kind.instructionName)\(count)目一度"
+        case .cluster(let kind, let count, let into):
+            placementPrefix(into) + clusterText(kind: kind, count: count)
+        case .picot(let chains):
+            picotText(chains: chains)
         case .skip:
             "1目飛ばす"
         case .leaveRemaining:
@@ -258,6 +262,11 @@ public enum StitchTableFormatter {
                 items.append(context.prefix(for: step) + placementPrefix(into) + "\(kind.instructionName)\(count)目編み入れる")
             case .decrease(let kind, let count):
                 items.append(context.prefix(for: step) + "\(kind.instructionName)\(count)目一度")
+            case .cluster(let kind, let count, let into):
+                // 玉編みは「n目」にまとめず1つずつ書く
+                items.append(context.prefix(for: step) + placementPrefix(into) + clusterText(kind: kind, count: count))
+            case .picot(let chains):
+                items.append(context.prefix(for: step) + picotText(chains: chains))
             case .leaveRemaining:
                 items.append("残りは編まない")
             case .closeRound:
@@ -303,6 +312,16 @@ public enum StitchTableFormatter {
     static func turningChainCountNote(chains: Int, counted: Bool) -> String {
         guard counted != StepKind.standardTurningChainCounted(chains: chains) else { return "" }
         return counted ? "（1目と数える）" : "（数えない）"
+    }
+
+    /// 玉編みの表記（「長編み3目の玉編み」）
+    static func clusterText(kind: StitchKind, count: Int) -> String {
+        "\(kind.instructionName)\(count)目の玉編み"
+    }
+
+    /// ピコットの表記（鎖3目なら「ピコット」、それ以外は「鎖4目のピコット」）
+    static func picotText(chains: Int) -> String {
+        chains == 3 ? "ピコット" : "鎖\(chains)目のピコット"
     }
 
     /// 束に編み入れる場合の頭の言葉（domain-spec 21）

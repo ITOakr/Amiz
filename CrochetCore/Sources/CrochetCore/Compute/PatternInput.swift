@@ -28,6 +28,23 @@ public enum PatternInput {
         return result.insertedTurningChain
     }
 
+    /// 「ピコット」ボタン：入力中の段の末尾にピコットを付ける。直前に目がなければ何もしない（domain-spec 21）
+    /// - Returns: 付けたか
+    @discardableResult
+    public static func addPicot(chains: Int = 3, to pattern: inout Pattern) -> Bool {
+        let index = ensureCurrentRow(in: &pattern)
+        var row = pattern.rows[index]
+        guard insertPicot(chains: chains, at: row.steps.count, in: &row, yarnID: pattern.currentYarnID) else { return false }
+        pattern.rows[index] = row
+        return true
+    }
+
+    /// いまピコットを付けられるか（入力中の段の末尾に目があるか）
+    public static func canAddPicot(in pattern: Pattern) -> Bool {
+        guard let index = pattern.currentRowIndex else { return false }
+        return canInsertPicot(at: pattern.rows[index].steps.count, in: pattern.rows[index])
+    }
+
     /// 糸を持ち替える（ui-spec U17）。これから編む目はこの糸になる。リストにない糸なら何もしない
     /// - Returns: 持ち替えたか
     @discardableResult

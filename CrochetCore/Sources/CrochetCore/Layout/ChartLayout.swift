@@ -31,11 +31,13 @@ public struct LaidOutStitch: Hashable, Sendable {
     public var polarRadius: Double
     /// 糸（nil は既定の糸。domain-spec 27・30）
     public var yarnID: UUID?
+    /// 玉編みの本数（普通の目は 1）
+    public var clusterCount: Int
 
     public init(
         ref: StitchRef, kind: StitchKind, role: ExpandedStitch.Role, into: Placement, isCounted: Bool,
         rowIndex: Int, countedIndex: Int?, head: CGPoint, bases: [CGPoint], sharedBaseCount: Int = 1,
-        angle: Double, height: Double, polarAngle: Double, polarRadius: Double, yarnID: UUID? = nil
+        angle: Double, height: Double, polarAngle: Double, polarRadius: Double, yarnID: UUID? = nil, clusterCount: Int = 1
     ) {
         self.ref = ref
         self.kind = kind
@@ -52,6 +54,7 @@ public struct LaidOutStitch: Hashable, Sendable {
         self.polarAngle = polarAngle
         self.polarRadius = polarRadius
         self.yarnID = yarnID
+        self.clusterCount = clusterCount
     }
 }
 

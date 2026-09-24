@@ -26,6 +26,14 @@ public enum StitchKind: String, Codable, CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// 玉編みにできる目か（中長編み・長編み・長々編み。domain-spec 2）
+    public var canBeClustered: Bool {
+        switch self {
+        case .halfDoubleCrochet, .doubleCrochet, .trebleCrochet: true
+        case .chain, .slipStitch, .singleCrochet: false
+        }
+    }
+
     /// 前段の目を拾うか（domain-spec 1・4）。鎖編みだけは前段に編み入れない
     public var takesPreviousStitch: Bool {
         self != .chain

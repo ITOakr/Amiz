@@ -23,6 +23,8 @@ public enum FlatLayout {
         public var uncountedTurningChainOutset = 0.3
         /// 作り目の鎖を1段目の根元からどれだけ下に描くか（1段目の記号と重ならないように）
         public var foundationChainOffset = 0.45
+        /// ピコットを頭からどれだけ上に出すか
+        public var picotOutset = 0.45
         /// 外接矩形の余白（段番号と矢印のぶんも含む）
         public var margin = 2.6
 
@@ -80,9 +82,11 @@ public enum FlatLayout {
             // 段の始まりの端：最初の目の半歩手前（まだ目がなければ前段の終わりの端）
             let seamX = (headXs.first ?? previousEndX) - direction * 0.5
 
+            var lastCountedIndex: Int?
             for (stitchIndex, stitch) in row.stitches.enumerated() {
                 let laidOut: LaidOutStitch
                 if let countedIndex = countedIndexByStitchIndex[stitchIndex] {
+                    lastCountedIndex = countedIndex
                     let bases = baseXs[countedIndex].map { CGPoint(x: $0, y: baseY) }
                     laidOut = make(
                         stitch, rowIndex: rowIndex, countedIndex: countedIndex,
@@ -101,10 +105,15 @@ public enum FlatLayout {
                     case .closingSlipStitch, .regular:
                         x = (headXs.last ?? previousEndX) + direction * 0.5
                         height = options.lowStitchHeight
+                    case .picot:
+                        // 直前の目の頭の上に小さな輪（根元はその目の頭）
+                        x = lastCountedIndex.map { headXs[$0] } ?? previousEndX
+                        height = rowHeight + options.picotOutset
                     }
+                    let base: CGPoint = if case .picot = stitch.role { CGPoint(x: x, y: topY) } else { CGPoint(x: x, y: baseY) }
                     laidOut = make(
                         stitch, rowIndex: rowIndex, countedIndex: nil,
-                        head: CGPoint(x: x, y: baseY - height), bases: [CGPoint(x: x, y: baseY)],
+                        head: CGPoint(x: x, y: baseY - height), bases: [base],
                         direction: direction, options: options
                     )
                 }
@@ -251,7 +260,7 @@ public enum FlatLayout {
             ref: stitch.ref, kind: stitch.kind, role: stitch.role, into: stitch.into, isCounted: stitch.isCounted,
             rowIndex: rowIndex, countedIndex: countedIndex, head: head, bases: bases, sharedBaseCount: sharedBaseCount,
             angle: angle, height: drawHeight(of: stitch, options: options),
-            polarAngle: atan2(-head.y, head.x), polarRadius: hypot(head.x, head.y), yarnID: stitch.yarnID
+            polarAngle: atan2(-head.y, head.x), polarRadius: hypot(head.x, head.y), yarnID: stitch.yarnID, clusterCount: stitch.clusterCount
         )
     }
 
@@ -262,6 +271,8 @@ public enum FlatLayout {
             Double(chains)
         case .closingSlipStitch:
             options.lowStitchHeight
+        case .picot:
+            0
         case .regular:
             stitch.kind.heightInChains == 0 ? options.lowStitchHeight : Double(stitch.kind.heightInChains)
         }

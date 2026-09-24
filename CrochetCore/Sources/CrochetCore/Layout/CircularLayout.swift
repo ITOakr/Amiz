@@ -24,6 +24,8 @@ public enum CircularLayout {
         public var uncountedTurningChainHeight = 0.5
         /// 段を閉じる引き抜きを頭からどれだけ内側に置くか（次の段の立ち上がりと離すため）
         public var closingSlipInset = 0.12
+        /// ピコットを頭からどれだけ外に出すか（輪の中心までの距離）
+        public var picotOutset = 0.45
         /// 外接矩形の余白
         public var margin = 1.5
 
@@ -74,9 +76,12 @@ public enum CircularLayout {
             let ownStep = headAngles.count > 1 ? headAngles[1] - headAngles[0] : previousStep
             let seamAngle = (headAngles.first ?? previousHeadAngles.first ?? 0) - ownStep / 2
 
+            /// 直前に置いた数える目（ピコットを付ける相手）
+            var lastCountedIndex: Int?
             for (stitchIndex, stitch) in row.stitches.enumerated() {
                 let laidOut: LaidOutStitch
                 if let countedIndex = countedIndexByStitchIndex[stitchIndex] {
+                    lastCountedIndex = countedIndex
                     let headAngle = headAngles[countedIndex]
                     let bases: [CGPoint]
                     if rowIndex == 0 {
@@ -110,11 +115,20 @@ public enum CircularLayout {
                     case .regular:
                         angle = headAngles.last ?? previousHeadAngles.first ?? 0
                         radius = outerRadius
+                    case .picot:
+                        // 直前の目の頭の外側に小さな輪（根元はその目の頭）
+                        angle = lastCountedIndex.map { headAngles[$0] } ?? previousHeadAngles.first ?? 0
+                        radius = outerRadius + options.picotOutset
+                    }
+                    let bases: [CGPoint] = switch stitch.role {
+                    case .closingSlipStitch: []
+                    case .picot: [point(center: center, radius: outerRadius, angle: angle)]
+                    default: [point(center: center, radius: innerRadius, angle: angle)]
                     }
                     laidOut = make(
                         stitch, rowIndex: rowIndex, countedIndex: nil,
                         headAngle: angle, outerRadius: radius,
-                        bases: stitch.role == .closingSlipStitch ? [] : [point(center: center, radius: innerRadius, angle: angle)],
+                        bases: bases,
                         center: center, options: options
                     )
                 }
@@ -264,7 +278,7 @@ public enum CircularLayout {
             ref: stitch.ref, kind: stitch.kind, role: stitch.role, into: stitch.into, isCounted: stitch.isCounted,
             rowIndex: rowIndex, countedIndex: countedIndex, head: head, bases: bases, sharedBaseCount: sharedBaseCount,
             angle: direction, height: drawHeight(of: stitch, options: options),
-            polarAngle: headAngle, polarRadius: outerRadius, yarnID: stitch.yarnID
+            polarAngle: headAngle, polarRadius: outerRadius, yarnID: stitch.yarnID, clusterCount: stitch.clusterCount
         )
     }
 
@@ -275,6 +289,9 @@ public enum CircularLayout {
             Double(chains)
         case .closingSlipStitch:
             options.lowStitchHeight
+        case .picot:
+            // ピコットは段の高さに含めない（段の外に描く）
+            0
         case .regular:
             stitch.kind.heightInChains == 0 ? options.lowStitchHeight : Double(stitch.kind.heightInChains)
         }

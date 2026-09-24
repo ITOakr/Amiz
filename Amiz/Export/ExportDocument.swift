@@ -27,6 +27,10 @@ enum LegendItem: Hashable, Identifiable {
     case decrease(StitchKind)
     /// 束に編み入れる（鎖のアーチをすくう。根元を離して描く。domain-spec 11）
     case chainSpace
+    /// 玉編み（目の種類と本数）
+    case cluster(StitchKind, count: Int)
+    /// ピコット（鎖の目数）
+    case picot(chains: Int)
 
     var id: String {
         switch self {
@@ -36,6 +40,8 @@ enum LegendItem: Hashable, Identifiable {
         case .increase(let kind): "increase.\(kind.rawValue)"
         case .decrease(let kind): "decrease.\(kind.rawValue)"
         case .chainSpace: "chainSpace"
+        case .cluster(let kind, let count): "cluster.\(kind.rawValue).\(count)"
+        case .picot(let chains): "picot.\(chains)"
         }
     }
 
@@ -47,6 +53,8 @@ enum LegendItem: Hashable, Identifiable {
         case .increase(let kind): "\(kind.instructionName)2目編み入れる（増し目）"
         case .decrease(let kind): "\(kind.instructionName)2目一度（減らし目）"
         case .chainSpace: "束に編み入れる（鎖のアーチをすくう）"
+        case .cluster(let kind, let count): "\(kind.instructionName)\(count)目の玉編み"
+        case .picot(let chains): chains == 3 ? "ピコット（鎖3目）" : "鎖\(chains)目のピコット"
         }
     }
 
@@ -58,6 +66,8 @@ enum LegendItem: Hashable, Identifiable {
         var hasTurningChain = false
         var hasClosing = false
         var hasChainSpace = false
+        var clusters: Set<ClusterKey> = []
+        var picots: Set<Int> = []
 
         for row in expansion.rows {
             for stitch in row.stitches {
@@ -66,6 +76,11 @@ enum LegendItem: Hashable, Identifiable {
                     hasTurningChain = true
                 case .closingSlipStitch:
                     hasClosing = true
+                case .picot(let chains):
+                    picots.insert(chains)
+                case .regular where stitch.clusterCount > 1:
+                    clusters.insert(ClusterKey(kind: stitch.kind, count: stitch.clusterCount))
+                    if stitch.into == .chainSpace { hasChainSpace = true }
                 case .regular:
                     kinds.insert(stitch.kind)
                     // 前段を複数目まとめて拾うのは減らし目。束（アーチの鎖をまとめて拾う）は違う
@@ -85,8 +100,15 @@ enum LegendItem: Hashable, Identifiable {
         if hasClosing { items.append(.closingSlipStitch) }
         items += StitchKind.allCases.filter { increases.contains($0) }.map { .increase($0) }
         items += StitchKind.allCases.filter { decreases.contains($0) }.map { .decrease($0) }
+        items += clusters.sorted { ($0.kind.heightInChains, $0.count) < ($1.kind.heightInChains, $1.count) }.map { .cluster($0.kind, count: $0.count) }
+        items += picots.sorted().map { .picot(chains: $0) }
         if hasChainSpace { items.append(.chainSpace) }
         return items
+    }
+
+    private struct ClusterKey: Hashable {
+        let kind: StitchKind
+        let count: Int
     }
 }
 
