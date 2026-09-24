@@ -28,7 +28,14 @@ extension FoundationKind: Codable {
         case .magicRing:
             self = .magicRing
         case .chain:
-            self = .chain(stitchCount: try container.decode(Int.self, forKey: .stitchCount))
+            let stitchCount = try container.decode(Int.self, forKey: .stitchCount)
+            guard stitchCount >= 1 else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .stitchCount, in: container,
+                    debugDescription: "鎖の作り目の目数は 1 以上で保存されます（読み込んだ値：\(stitchCount)）"
+                )
+            }
+            self = .chain(stitchCount: stitchCount)
         }
     }
 

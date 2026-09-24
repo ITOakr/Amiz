@@ -115,7 +115,8 @@ public enum Expander {
 
         /// 前段の目を count 目拾い、カーソルを進める。返すのは前段の編んだ順での番号。
         /// 逆順に拾う段では前段の最後の目から下がっていく（拾いすぎると負の番号になる）
-        mutating func pick(_ count: Int) -> Range<Int> {
+        mutating func pick(_ requested: Int) -> Range<Int> {
+            let count = max(0, requested)
             let range: Range<Int>
             if picksReversed, let previousCount {
                 let end = previousCount - cursor
@@ -162,9 +163,10 @@ public enum Expander {
             ))
 
         case .increase(let kind, let count, let into):
-            // 同じ編み入れ先に count 目編む（domain-spec 2）
+            // 同じ編み入れ先に count 目編む（domain-spec 2）。
+            // count は読み込み時に検証しているが、万一おかしな値でも落ちないように守る
             let picks = state.pick(for: kind, into: into, step: step)
-            for ordinal in 0..<count {
+            for ordinal in 0..<max(1, count) {
                 state.stitches.append(ExpandedStitch(
                     ref: state.ref(step, repetition: repetition, ordinal: ordinal),
                     kind: kind,
@@ -180,7 +182,7 @@ public enum Expander {
             state.stitches.append(ExpandedStitch(
                 ref: state.ref(step, repetition: repetition),
                 kind: kind,
-                picks: state.pick(count),
+                picks: state.pick(max(1, count)),
                 isCounted: true,
                 yarnID: step.yarnID
             ))
@@ -226,7 +228,7 @@ public enum Expander {
             ))
 
         case .repeatGroup(let unit, let count):
-            let times = iterations(of: unit, count: count, step: step, state: &state)
+            let times = max(0, iterations(of: unit, count: count, step: step, state: &state))
             state.repeatCounts[step.id] = times
             for repetition in 0..<times {
                 expand(steps: unit, repetition: repetition, state: &state)
