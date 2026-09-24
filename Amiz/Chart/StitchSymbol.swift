@@ -366,6 +366,34 @@ struct StitchSymbolCatalogView: View {
                 }
             }
             .frame(height: 150)
+            Text("玉編みとピコット").font(.headline)
+            Canvas { context, size in
+                let style = StitchSymbol.Style(unit: 28, lineWidth: 1.8)
+                let baseline = size.height * 0.85
+                var x: CGFloat = 30
+                // 中長編み3目の玉編み
+                context.stroke(StitchSymbol.clusterPath(kind: .halfDoubleCrochet, count: 3, from: CGPoint(x: x, y: baseline), to: CGPoint(x: x, y: baseline - style.unit * 2), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                x += 60
+                // 長編み3目の玉編み
+                context.stroke(StitchSymbol.clusterPath(kind: .doubleCrochet, count: 3, from: CGPoint(x: x, y: baseline), to: CGPoint(x: x, y: baseline - style.unit * 3), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                x += 60
+                // 長編み5目の玉編み
+                context.stroke(StitchSymbol.clusterPath(kind: .doubleCrochet, count: 5, from: CGPoint(x: x, y: baseline), to: CGPoint(x: x, y: baseline - style.unit * 3), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                x += 70
+                // 長々編み2目の玉編み
+                context.stroke(StitchSymbol.clusterPath(kind: .trebleCrochet, count: 2, from: CGPoint(x: x, y: baseline), to: CGPoint(x: x, y: baseline - style.unit * 4), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                x += 60
+                // 細編みの上にピコット（鎖3目）
+                let scTop = CGPoint(x: x, y: baseline - style.unit)
+                context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: CGPoint(x: x, y: baseline), to: scTop, style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                context.stroke(StitchSymbol.picotPath(chains: 3, from: scTop, to: CGPoint(x: x, y: scTop.y - style.unit * 0.55), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                x += 50
+                // 鎖5目のピコット
+                let scTop2 = CGPoint(x: x, y: baseline - style.unit)
+                context.stroke(StitchSymbol.strokePath(kind: .singleCrochet, from: CGPoint(x: x, y: baseline), to: scTop2, style: style), with: .color(.primary), lineWidth: style.lineWidth)
+                context.stroke(StitchSymbol.picotPath(chains: 5, from: scTop2, to: CGPoint(x: x, y: scTop2.y - style.unit * 0.55), style: style), with: .color(.primary), lineWidth: style.lineWidth)
+            }
+            .frame(height: 150)
         }
         .padding()
     }
