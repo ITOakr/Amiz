@@ -55,7 +55,7 @@ final class ChainSpaceUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["4段目・この段 0目"].waitForExistence(timeout: 2))
 
         // 目数表：3段目の文と目数、警告なし
-        app.buttons["目数表"].tap()
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
         XCTAssertTrue(app.staticTexts["束に細編み3目編み入れる×全目"].waitForExistence(timeout: 2))
         // 2段目も合計36目なので「増減なし」が付く
         XCTAssertTrue(app.staticTexts["36目（増減なし）"].exists)

@@ -47,8 +47,8 @@ final class YarnUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["1段目・この段 6目"].waitForExistence(timeout: 2))
         snapshot(app, name: "yarn-2-editor")
         app.buttons["op.finishRow"].tap()
-        app.buttons["目数表"].tap()
-        XCTAssertTrue(app.staticTexts["わの作り目にこげ茶で細編み6目"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
+        XCTAssertTrue(app.waitForTableText("わの作り目にこげ茶で細編み6目"))
     }
 
     @MainActor

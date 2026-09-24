@@ -81,15 +81,14 @@ final class EditorSmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["6段目・この段 0目"].waitForExistence(timeout: 2))
 
         // 目数表（ui-spec 8章のサンプルと TC-1）。図タブから切り替え、画面外の行は作られないので上下にスクロールして確かめる
-        app.buttons["目数表"].tap()
-        let table = app.collectionViews.firstMatch
-        XCTAssertTrue(table.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
         for text in ["（細編み2目、細編み2目編み入れる）×6", "24目", "残りの目すべてに細編み", "入力中"] {
             XCTAssertTrue(app.staticTexts[text].exists, "目数表の下の方に「\(text)」がある")
         }
-        table.swipeDown()
+        // 一番上の「作り目」の行まで戻す（その下の1段目より上にある）
+        XCTAssertTrue(app.waitForTableText("わの作り目"), "目数表の上までスクロールできる")
         for text in ["わの作り目", "わの作り目に細編み6目", "6目", "細編み2目編み入れる×全目", "12目", "（細編み1目、細編み2目編み入れる）×6", "18目"] {
-            XCTAssertTrue(app.staticTexts[text].waitForExistence(timeout: 2), "目数表の上の方に「\(text)」がある")
+            XCTAssertTrue(app.staticTexts[text].exists, "目数表の上の方に「\(text)」がある")
         }
 
         // 1目削除で「段を終える」が取り消され、5段目が入力中に戻る
@@ -124,7 +123,7 @@ final class EditorSmokeUITests: XCTestCase {
         finish.tap()
         XCTAssertTrue(alert.waitForExistence(timeout: 2))
         alert.buttons["このまま終える"].tap()
-        app.buttons["目数表"].tap()
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
         XCTAssertTrue(app.staticTexts["前段6目のうち3目しか拾っていません"].waitForExistence(timeout: 2))
 
         // 3段目：2目編んで 残りは編まない → 警告なし
@@ -227,12 +226,9 @@ final class EditorSmokeUITests: XCTestCase {
 
         // 目数表で1段目をタップ → 編集中 → 細編みを1目足して完了 → 確認
         // （表は末尾へ自動スクロールするので、上へ戻してから1段目を探す）
-        app.buttons["目数表"].tap()
-        let table = app.collectionViews.firstMatch
-        XCTAssertTrue(table.waitForExistence(timeout: 2))
-        table.swipeDown()
-        let row1 = app.buttons["table.row.1"]
-        XCTAssertTrue(row1.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
+        let row1 = app.waitForTableRow(1)
+        XCTAssertTrue(row1.exists, "目数表で 1段目の行が見える")
         row1.tap()
         XCTAssertTrue(app.staticTexts["1段目を編集中・この段 6目"].waitForExistence(timeout: 2))
         singleCrochet.tap()
@@ -250,8 +246,7 @@ final class EditorSmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["前段14目のうち12目しか拾っていません"].exists)
 
         // もう一度編集して、今度は「上の段をほどく」
-        table.swipeDown()
-        XCTAssertTrue(row1.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.waitForTableRow(1).exists, "目数表で1段目の行が見える")
         row1.tap()
         app.buttons["op.deleteLast"].tap()
         app.buttons["editing.done"].tap()
@@ -276,14 +271,10 @@ final class EditorSmokeUITests: XCTestCase {
         singleCrochet.tap()
         app.buttons["op.finishRow"].tap()
 
-        app.buttons["目数表"].tap()
-        let table = app.collectionViews.firstMatch
-        XCTAssertTrue(table.waitForExistence(timeout: 2))
-        table.swipeDown()
-
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
         // 2段目を長押し → 複製 ×4
-        let row2 = app.buttons["table.row.2"]
-        XCTAssertTrue(row2.waitForExistence(timeout: 2))
+        let row2 = app.waitForTableRow(2)
+        XCTAssertTrue(row2.exists, "目数表で 2段目の行が見える")
         row2.press(forDuration: 1.0)
         let duplicate = app.buttons["この段を複製"]
         XCTAssertTrue(duplicate.waitForExistence(timeout: 2))
@@ -301,9 +292,8 @@ final class EditorSmokeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["7段目・この段 0目"].exists)
 
         // 1段目を長押し → 削除 → 確認が出る → キャンセル
-        table.swipeDown()
-        let row1 = app.buttons["table.row.1"]
-        XCTAssertTrue(row1.waitForExistence(timeout: 2))
+        let row1 = app.waitForTableRow(1)
+        XCTAssertTrue(row1.exists, "目数表で 1段目の行が見える")
         row1.press(forDuration: 1.0)
         let delete = app.buttons["この段を削除"]
         XCTAssertTrue(delete.waitForExistence(timeout: 2))
