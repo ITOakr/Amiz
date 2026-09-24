@@ -15,6 +15,8 @@ struct HomeView: View {
     @State private var renamingWork: Work?
     @State private var renameText = ""
     @State private var deletingWork: Work?
+    /// 保存や読み込みに失敗したときに出す文（AMIZ-68）
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -42,7 +44,7 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(for: Work.self) { work in
-                EditorView(work: work)
+                WorkEditorView(work: work)
             }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
@@ -53,7 +55,7 @@ struct HomeView: View {
             .sheet(isPresented: $isNewWorkPresented) {
                 NewWorkSheet { work in
                     context.insert(work)
-                    try? context.save()
+                    save()
                     path.append(work)
                 }
             }
@@ -66,6 +68,11 @@ struct HomeView: View {
                     }
                 }
                 Button("キャンセル", role: .cancel) {}
+            }
+            .alert("エラー", isPresented: isErrorPresented) {
+                Button("閉じる", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
             }
             .confirmationDialog("この作品を削除しますか？", isPresented: isDeletePresented, titleVisibility: .visible) {
                 Button("削除", role: .destructive) {
@@ -90,26 +97,43 @@ struct HomeView: View {
         Binding(get: { deletingWork != nil }, set: { if !$0 { deletingWork = nil } })
     }
 
+    private var isErrorPresented: Binding<Bool> {
+        Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+    }
+
     private func rename(_ work: Work, to name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         work.name = trimmed
         work.updatedAt = Date()
-        try? context.save()
+        save()
     }
 
-    /// 複製：同じ編み図とサムネイルで「〜のコピー」を作る。更新日は今なので一覧の先頭に来る
+    /// 複製：同じ編み図とサムネイルで「〜のコピー」を作る。更新日は今なので一覧の先頭に来る。
+    /// 編み図が読めない作品は複製しない（壊れたデータを増やさない）
     private func duplicate(_ work: Work) {
-        guard let pattern = work.loadPattern() else { return }
+        guard let pattern = try? work.loadPattern() else {
+            errorMessage = Work.StorageError.cannotReadPattern.localizedDescription
+            return
+        }
         let copy = Work(name: work.name + "のコピー", pattern: pattern)
         copy.thumbnail = work.thumbnail
         context.insert(copy)
-        try? context.save()
+        save()
     }
 
     private func delete(_ work: Work) {
         context.delete(work)
-        try? context.save()
+        save()
+    }
+
+    /// 保存する。失敗したら理由を伝える（黙って捨てない。AMIZ-68）
+    private func save() {
+        do {
+            try context.save()
+        } catch {
+            errorMessage = Work.StorageError.cannotWrite(underlying: error.localizedDescription).localizedDescription
+        }
     }
 
     private enum Destination: Hashable {
@@ -201,7 +225,7 @@ private struct WorkCard: View {
 
     /// 「4段目まで」（入力中の段を含む段数）
     private var rowsText: String {
-        let count = work.loadPattern()?.rows.count ?? 0
+        guard let count = (try? work.loadPattern())?.rows.count else { return "開けません" }
         return count == 0 ? "未入力" : "\(count)段目まで"
     }
 }
