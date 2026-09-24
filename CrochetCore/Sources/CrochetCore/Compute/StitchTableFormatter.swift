@@ -122,7 +122,9 @@ public enum StitchTableFormatter {
 
     /// 目数表の行。同じ内容で目数が変わらない段が続けば1行にまとめる（domain-spec 18）。
     /// 警告のある段はまとめない（警告が隠れないように）
+    /// `pattern` と `expansion` の段数が違うときは空を返す（呼び出し側の取り違えで落とさない。AMIZ-73）
     public static func tableRows(for pattern: Pattern, expansion: PatternExpansion, warnings: [RowWarning] = []) -> [StitchTableRow] {
+        guard pattern.rows.count == expansion.rows.count else { return [] }
         let warnedRows = Set(warnings.map(\.rowIndex))
         var result: [StitchTableRow] = []
         var index = 0

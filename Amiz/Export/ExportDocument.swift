@@ -169,13 +169,8 @@ struct ExportDocument {
 
     /// 目数表の行（空の末尾の段は含めない）
     var tableRows: [StitchTableRow] {
-        var trimmed = pattern
-        var trimmedExpansion = expansion
-        while let last = trimmed.rows.last, last.steps.isEmpty {
-            trimmed.rows.removeLast()
-            trimmedExpansion.rows.removeLast()
-        }
-        return StitchTableFormatter.tableRows(for: trimmed, expansion: trimmedExpansion, warnings: warnings)
+        let trimmed = pattern.trimmingTrailingEmptyRows(expansion: expansion)
+        return StitchTableFormatter.tableRows(for: trimmed.pattern, expansion: trimmed.expansion, warnings: warnings)
     }
 
     /// 表紙に載せる糸リスト（糸が2本以上なら色が意味を持つ。1本でも名前・品番の控えになるので載せる）

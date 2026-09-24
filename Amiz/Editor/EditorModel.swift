@@ -253,16 +253,17 @@ final class EditorModel {
 
     /// 目数表の行（入力中の段を除く。同じ内容の段はまとめる。ui-spec 5-4）
     var finishedTableRows: [StitchTableRow] {
-        guard let current = currentRowIndex else { return [] }
+        guard let current = currentRowIndex, expansion.rows.count > current else { return [] }
         var finished = displayedPattern
         finished.rows.removeLast()
         let finishedExpansion = PatternExpansion(rows: Array(expansion.rows[..<current]))
         return StitchTableFormatter.tableRows(for: finished, expansion: finishedExpansion, warnings: warnings)
     }
 
-    /// 1段分の目数表の行（まとめた行を展開して表示するときに使う）
-    func singleTableRow(at index: Int) -> StitchTableRow {
+    /// 1段分の目数表の行（まとめた行を展開して表示するときに使う）。範囲外なら nil（AMIZ-73）
+    func singleTableRow(at index: Int) -> StitchTableRow? {
         let shown = displayedPattern
+        guard shown.rows.indices.contains(index), expansion.rows.indices.contains(index) else { return nil }
         return StitchTableRow(
             rowNumbers: (index + 1)...(index + 1),
             rowIDs: [shown.rows[index].id],
@@ -571,7 +572,7 @@ final class EditorModel {
     func finishEditingRow() {
         guard let session = editingSession else { return }
         let edit = RowEdit.replace(rowIndex: session.rowIndex, with: session.row)
-        let impact = PatternEditor.impact(of: edit, on: pattern)
+        guard let impact = PatternEditor.impact(of: edit, on: pattern) else { return }
         if impact.needsConfirmation {
             pendingConfirmation = PendingConfirmation(impact: impact, edit: edit)
         } else {
@@ -613,7 +614,7 @@ final class EditorModel {
         guard pattern.rows.indices.contains(edit.rowIndex) else { return }
         selection = nil
         editingSession = nil
-        let impact = PatternEditor.impact(of: edit, on: pattern)
+        guard let impact = PatternEditor.impact(of: edit, on: pattern) else { return }
         if impact.needsConfirmation {
             pendingConfirmation = PendingConfirmation(impact: impact, edit: edit)
         } else {
@@ -701,7 +702,7 @@ final class EditorModel {
         guard applied else { return }
 
         let editedRow = edited.rows[location.rowIndex]
-        let impact = PatternEditor.impact(of: .replace(rowIndex: location.rowIndex, with: editedRow), on: pattern)
+        guard let impact = PatternEditor.impact(of: .replace(rowIndex: location.rowIndex, with: editedRow), on: pattern) else { return }
         let keepsSelection: Bool = switch edit {
         case .changeKind, .setTurningChain, .setTurningChainCounted: true
         case .delete, .unwrapRepeat: false

@@ -19,7 +19,9 @@ struct StitchTableView: View {
                 ForEach(model.finishedTableRows, id: \.rowNumbers) { row in
                     if row.isMerged, expandedRuns.contains(row.rowNumbers.lowerBound) {
                         ForEach(row.rowNumbers.map { $0 - 1 }, id: \.self) { index in
-                            finishedRow(model.singleTableRow(at: index))
+                            if let single = model.singleTableRow(at: index) {
+                                finishedRow(single)
+                            }
                         }
                     } else {
                         finishedRow(row)

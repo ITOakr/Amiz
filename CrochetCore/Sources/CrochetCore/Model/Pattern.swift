@@ -59,6 +59,18 @@ public struct Pattern: Hashable, Sendable {
     public var currentYarn: Yarn {
         yarn(for: currentYarnID)
     }
+
+    /// 入力を始めていない末尾の空の段を落としたコピー（目数表や書き出しで使う）。
+    /// 展開結果も一緒に落として、段数を必ずそろえる（AMIZ-73）
+    public func trimmingTrailingEmptyRows(expansion: PatternExpansion) -> (pattern: Pattern, expansion: PatternExpansion) {
+        var trimmed = self
+        var trimmedExpansion = expansion
+        while let last = trimmed.rows.last, last.steps.isEmpty, !trimmedExpansion.rows.isEmpty {
+            trimmed.rows.removeLast()
+            trimmedExpansion.rows.removeLast()
+        }
+        return (trimmed, trimmedExpansion)
+    }
 }
 
 // MARK: - Codable
