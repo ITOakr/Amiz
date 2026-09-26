@@ -28,23 +28,51 @@ final class Work {
         self.patternData = (try? pattern.jsonData()) ?? Data()
     }
 
+    /// 保存や読み込みが失敗したときの理由（画面で伝えるために持つ）
+    enum StorageError: LocalizedError {
+        /// 編み図の JSON が壊れていて読めない
+        case cannotReadPattern
+        /// 編み図を JSON にできない
+        case cannotEncodePattern
+        /// 保存先に書き込めない（容量不足など）
+        case cannotWrite(underlying: String)
+
+        var errorDescription: String? {
+            switch self {
+            case .cannotReadPattern: "この作品の編み図を読み込めませんでした。"
+            case .cannotEncodePattern: "編み図を保存できる形にできませんでした。"
+            case .cannotWrite: "保存できませんでした。端末の空き容量を確認してください。"
+            }
+        }
+    }
+
     /// 編み方
     var method: WorkingMethod {
         WorkingMethod(rawValue: methodRawValue) ?? .joinedRounds
     }
 
-    /// 編み図を JSON から読み込む。壊れていれば nil
-    func loadPattern() -> Pattern? {
-        try? Pattern(jsonData: patternData)
+    /// 編み図を JSON から読み込む。壊れていれば `StorageError.cannotReadPattern`。
+    /// **読めないときに空の編み図で開いてはいけない**（自動保存で元のデータを上書きしてしまうため。AMIZ-68）
+    func loadPattern() throws -> Pattern {
+        do {
+            return try Pattern(jsonData: patternData)
+        } catch {
+            throw StorageError.cannotReadPattern
+        }
     }
 
-    /// 編み図を保存する（更新日も進める）。すぐにディスクへ書き込む。`thumbnail` を渡せばサムネイルも更新する
-    func save(pattern: Pattern, thumbnail: Data? = nil) {
-        guard let data = try? pattern.jsonData() else { return }
+    /// 編み図を保存する（更新日も進める）。すぐにディスクへ書き込む。`thumbnail` を渡せばサムネイルも更新する。
+    /// 失敗したら投げる（呼び出し側が画面で伝える）
+    func save(pattern: Pattern, thumbnail: Data? = nil) throws {
+        guard let data = try? pattern.jsonData() else { throw StorageError.cannotEncodePattern }
         patternData = data
         methodRawValue = pattern.method.rawValue
         if let thumbnail { self.thumbnail = thumbnail }
         updatedAt = Date()
-        try? modelContext?.save()
+        do {
+            try modelContext?.save()
+        } catch {
+            throw StorageError.cannotWrite(underlying: error.localizedDescription)
+        }
     }
 }

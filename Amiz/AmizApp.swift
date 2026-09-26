@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import CrochetCore
 
 @main
 struct AmizApp: App {
@@ -70,7 +71,15 @@ struct AmizApp: App {
                         UserDefaults.standard.removePersistentDomain(forName: bundleID)
                     }
                 }
-                return try ModelContainer(for: Work.self, configurations: ModelConfiguration(url: url))
+                let container = try ModelContainer(for: Work.self, configurations: ModelConfiguration(url: url))
+                // UI テスト用：編み図が読めない作品を1つ置く（AMIZ-68 の確認）
+                if arguments.contains("--seed-broken-work") {
+                    let work = Work(name: "壊れた作品", pattern: Pattern(method: .joinedRounds, foundation: .magicRing))
+                    work.patternData = Data("not json".utf8)
+                    container.mainContext.insert(work)
+                    try? container.mainContext.save()
+                }
+                return container
             }
             return try ModelContainer(for: Work.self)
         } catch {

@@ -25,11 +25,11 @@ struct ThumbnailTests {
     func savedWithWork() throws {
         let work = Work(name: "くま", pattern: SamplePatterns.bearHead)
         #expect(work.thumbnail == nil)
-        work.save(pattern: SamplePatterns.bearHead, thumbnail: ThumbnailRenderer.png(for: SamplePatterns.bearHead))
+        try work.save(pattern: SamplePatterns.bearHead, thumbnail: ThumbnailRenderer.png(for: SamplePatterns.bearHead))
         #expect((work.thumbnail?.count ?? 0) > 1000)
         // サムネイルを渡さない保存では前のものが残る
         let previous = work.thumbnail
-        work.save(pattern: SamplePatterns.bearHead)
+        try work.save(pattern: SamplePatterns.bearHead)
         #expect(work.thumbnail == previous)
     }
 }

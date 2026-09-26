@@ -11,8 +11,11 @@ struct EditorView: View {
     @State private var model: EditorModel
     /// 作品名（ツールバーに表示）
     let title: String
-    /// 編み図が変わったときに呼ぶ（自動保存。tech-spec 6）。確認用の作品では nil
-    private let onPatternChange: ((Pattern) -> Void)?
+    /// 編み図が変わったときに呼ぶ（自動保存。tech-spec 6）。保存できなければ理由を返す。確認用の作品では nil
+    private let onPatternChange: ((Pattern) -> Error?)?
+    /// 保存に失敗した理由（一度だけ知らせる。AMIZ-68）
+    @State private var saveErrorMessage: String?
+    @State private var hasReportedSaveError = false
     /// 自動保存をまとめるための待ち（連続入力のたびに書き込まないように）
     @State private var saveTask: Task<Void, Never>?
     /// 立ち上がりの鎖の自動入力（ui-spec 6-3）
@@ -35,18 +38,22 @@ struct EditorView: View {
         case table = "目数表"
     }
 
-    init(model: EditorModel = EditorModel(), title: String = "新しい作品", onPatternChange: ((Pattern) -> Void)? = nil) {
+    init(model: EditorModel = EditorModel(), title: String = "新しい作品", onPatternChange: ((Pattern) -> Error?)? = nil) {
         _model = State(initialValue: model)
         self.title = title
         self.onPatternChange = onPatternChange
     }
 
-    /// 保存済みの作品を開く。編み図が変わるたびに作品へ自動保存する
-    init(work: Work) {
-        let pattern = work.loadPattern() ?? Pattern(method: work.method, foundation: .magicRing)
+    /// 保存済みの作品を開く（読み込みに成功した編み図を渡す）。編み図が変わるたびに作品へ自動保存する
+    init(work: Work, pattern: Pattern) {
         self.init(model: EditorModel(pattern: pattern), title: work.name) { pattern in
-            // サムネイルは保存のたびに作り直す（ui-spec 3）
-            work.save(pattern: pattern, thumbnail: ThumbnailRenderer.png(for: pattern))
+            do {
+                // サムネイルは保存のたびに作り直す（ui-spec 3）
+                try work.save(pattern: pattern, thumbnail: ThumbnailRenderer.png(for: pattern))
+                return nil
+            } catch {
+                return error
+            }
         }
     }
 
@@ -98,10 +105,16 @@ struct EditorView: View {
         .onChange(of: model.pattern) { _, pattern in
             scheduleSave(pattern)
         }
+        // 保存に失敗したことを伝える（AMIZ-68）。入力は続けられる
+        .alert("保存できませんでした", isPresented: isSaveErrorPresented) {
+            Button("閉じる", role: .cancel) {}
+        } message: {
+            Text(saveErrorMessage ?? "")
+        }
         .onDisappear {
             // 画面を閉じるときは待たずに保存する
             saveTask?.cancel()
-            onPatternChange?(model.pattern)
+            _ = onPatternChange?(model.pattern)
         }
     }
 
@@ -123,14 +136,26 @@ struct EditorView: View {
         }
     }
 
-    /// 少し待ってから保存する。待っている間に次の変更が来たら待ち直す
+    private var isSaveErrorPresented: Binding<Bool> {
+        Binding(get: { saveErrorMessage != nil }, set: { if !$0 { saveErrorMessage = nil } })
+    }
+
+    /// 少し待ってから保存する。待っている間に次の変更が来たら待ち直す。
+    /// 失敗したら一度だけ知らせる（連続で失敗しても何度も出さない）
     private func scheduleSave(_ pattern: Pattern) {
         guard let onPatternChange else { return }
         saveTask?.cancel()
         saveTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
-            onPatternChange(pattern)
+            if let error = onPatternChange(pattern) {
+                if !hasReportedSaveError {
+                    hasReportedSaveError = true
+                    saveErrorMessage = error.localizedDescription
+                }
+            } else {
+                hasReportedSaveError = false
+            }
         }
     }
 
