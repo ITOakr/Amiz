@@ -14,8 +14,10 @@ struct FlatLayoutTests {
     func foundationAndFirstRow() {
         let layout = TestPatterns.tc9(rows: 1).flatLayout()
         #expect(layout.foundationChain.count == 20)
-        #expect(layout.foundationChain.map(\.x) == (0..<20).map { CGFloat($0) })
-        #expect(layout.foundationChain.allSatisfy { $0.y > 0 && $0.y < 1 })  // 1段目の根元（y = 0）の少し下
+        #expect(layout.foundationChain.map(\.head.x) == (0..<20).map { CGFloat($0) })
+        #expect(layout.foundationChain.allSatisfy { $0.head.y > 0 && $0.head.y < 1 })  // 1段目の根元（y = 0）の少し下
+        // 鎖1目は左（根元）から右（頭）へ1目ぶん寝ている
+        #expect(layout.foundationChain.allSatisfy { $0.head.x - $0.root.x == 1 && $0.head.y == $0.root.y })
         #expect(layout.rings.isEmpty && layout.bands.count == 1)
 
         let row1 = heads(layout, row: 0)

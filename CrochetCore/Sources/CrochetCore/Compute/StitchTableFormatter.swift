@@ -51,6 +51,7 @@ public enum StitchTableFormatter {
         let prefix = switch pattern.foundation {
         case .magicRing: "わの作り目に"
         case .chain: "作り目に"
+        case .chainRing: "鎖の輪の中に"
         }
         return prefix + body
     }
@@ -95,6 +96,8 @@ public enum StitchTableFormatter {
             "わの作り目"
         case .chain:
             "作り目：鎖\(foundationChainCount(for: pattern) ?? 0)目"
+        case .chainRing(let chainCount):
+            "作り目：鎖\(chainCount)目を輪にする"
         }
     }
 
@@ -368,6 +371,7 @@ extension FoundationKind {
         switch self {
         case .magicRing: "わの作り目"
         case .chain: "鎖の作り目"
+        case .chainRing: "鎖を輪にした作り目"
         }
     }
 }

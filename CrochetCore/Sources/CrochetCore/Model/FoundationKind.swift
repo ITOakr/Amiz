@@ -8,18 +8,21 @@ public enum FoundationKind: Hashable, Sendable {
     /// 鎖の作り目。`stitchCount` は「1段目に編む目数 n」。
     /// 実際に編む鎖の目数は保存せず、立ち上がりの鎖の目数から計算して表示する（domain-spec 33）
     case chain(stitchCount: Int)
+    /// 鎖を輪にした作り目。`chainCount` は「輪にする鎖の目数」そのもの。
+    /// 1段目はこの輪の中に束に編み入れるので、何目でも編み入れられる（domain-spec 33）
+    case chainRing(chainCount: Int)
 }
 
 // MARK: - JSON 変換
-// {"type":"magicRing"} または {"type":"chain","stitchCount":20} の形にする。
+// {"type":"magicRing"}、{"type":"chain","stitchCount":20}、{"type":"chainRing","chainCount":6} の形にする。
 
 extension FoundationKind: Codable {
     private enum CodingKeys: String, CodingKey {
-        case type, stitchCount
+        case type, stitchCount, chainCount
     }
 
     private enum TypeName: String, Codable {
-        case magicRing, chain
+        case magicRing, chain, chainRing
     }
 
     public init(from decoder: Decoder) throws {
@@ -36,6 +39,15 @@ extension FoundationKind: Codable {
                 )
             }
             self = .chain(stitchCount: stitchCount)
+        case .chainRing:
+            let chainCount = try container.decode(Int.self, forKey: .chainCount)
+            guard chainCount >= 1 else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .chainCount, in: container,
+                    debugDescription: "輪にする鎖の目数は 1 以上で保存されます（読み込んだ値：\(chainCount)）"
+                )
+            }
+            self = .chainRing(chainCount: chainCount)
         }
     }
 
@@ -47,6 +59,9 @@ extension FoundationKind: Codable {
         case .chain(let stitchCount):
             try container.encode(TypeName.chain, forKey: .type)
             try container.encode(stitchCount, forKey: .stitchCount)
+        case .chainRing(let chainCount):
+            try container.encode(TypeName.chainRing, forKey: .type)
+            try container.encode(chainCount, forKey: .chainCount)
         }
     }
 }

@@ -16,6 +16,9 @@ public enum CircularLayout {
     public struct Options: Hashable, Sendable {
         /// わの作り目の穴の半径
         public var ringRadius = 0.8
+        /// 鎖を輪にした作り目で、1段目の根元を輪からどれだけ外に離すか。
+        /// 束に編み入れた目は根元を離して描く（domain-spec 11）。画面側の `Style.chainSpaceGap` と同じ量
+        public var chainRingBaseGap = 0.34
         /// 段の高さの下限（鎖○目分）
         public var minRowHeight = 1.0
         /// 高さのない目（鎖・引き抜き）を描くときの長さ
@@ -37,7 +40,10 @@ public enum CircularLayout {
         let center = CGPoint.zero
         var stitches: [LaidOutStitch] = []
         var rings: [RowRing] = []
-        var innerRadius = options.ringRadius
+        // 穴の半径。鎖を輪にした作り目は、輪にした鎖が1目ぶんずつ並ぶ大きさにする（domain-spec 33）
+        let holeRadius = holeRadius(for: pattern.foundation, options: options)
+        var innerRadius = holeRadius
+        let isChainRing = if case .chainRing = pattern.foundation { true } else { false }
         /// 前段の「数える目」の頭の角度（数える目の順）
         var previousHeadAngles: [Double] = []
 
@@ -85,8 +91,10 @@ public enum CircularLayout {
                     let headAngle = headAngles[countedIndex]
                     let bases: [CGPoint]
                     if rowIndex == 0 {
-                        // わの作り目：根元は輪の上、頭と同じ角度
-                        bases = [point(center: center, radius: innerRadius, angle: headAngle)]
+                        // 作り目：根元は輪の上、頭と同じ角度。
+                        // 鎖を輪にした作り目は輪の中に束に編み入れるので、根元を輪から少し離す（domain-spec 11）
+                        let gap = isChainRing ? options.chainRingBaseGap : 0
+                        bases = [point(center: center, radius: innerRadius + gap, angle: headAngle)]
                     } else {
                         bases = baseAngles[countedIndex].map { point(center: center, radius: innerRadius, angle: $0) }
                     }
@@ -145,7 +153,11 @@ public enum CircularLayout {
 
         let radius = innerRadius + options.margin
         let bounds = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
-        return ChartLayout(stitches: stitches, rings: rings, center: center, bounds: bounds)
+        return ChartLayout(
+            stitches: stitches, rings: rings,
+            foundationChain: foundationChain(for: pattern.foundation, center: center, radius: holeRadius),
+            center: center, bounds: bounds
+        )
     }
 
     // MARK: - 頭の角度
@@ -221,6 +233,32 @@ public enum CircularLayout {
             angle: direction, height: drawHeight(of: stitch, options: options),
             polarAngle: headAngle, polarRadius: outerRadius, yarnID: stitch.yarnID, clusterCount: stitch.clusterCount
         )
+    }
+
+    /// 穴（一番内側）の半径。鎖を輪にした作り目は、鎖 n 目が1目ぶんずつ並ぶ円の大きさ（円周 ≒ n）にする。
+    /// わの作り目より小さくはしない
+    static func holeRadius(for foundation: FoundationKind, options: Options) -> Double {
+        switch foundation {
+        case .chainRing(let chainCount):
+            max(options.ringRadius, Double(chainCount) / (2 * Double.pi))
+        case .magicRing, .chain:
+            options.ringRadius
+        }
+    }
+
+    /// 作り目の鎖の位置（鎖を輪にした作り目のみ）。一番内側の輪の上に、編む向き（反時計回り）に等間隔で並べる
+    static func foundationChain(
+        for foundation: FoundationKind, center: CGPoint, radius: Double
+    ) -> [FoundationChainLink] {
+        guard case .chainRing(let chainCount) = foundation else { return [] }
+        let step = (2 * Double.pi) / Double(max(chainCount, 1))
+        return (0..<chainCount).map { index in
+            let head = Double(index) * step
+            return FoundationChainLink(
+                root: point(center: center, radius: radius, angle: head - step),
+                head: point(center: center, radius: radius, angle: head)
+            )
+        }
     }
 
     /// 描くときの長さ（鎖○目分）

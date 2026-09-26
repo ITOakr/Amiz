@@ -100,9 +100,25 @@ public struct RowBand: Hashable, Sendable {
     }
 }
 
+/// 作り目の鎖1目の位置（tech-spec 8-1・8-2）。
+///
+/// 記号は根元から頭に向けて描くので、向きを持たせるために両端を持つ。平面図では横に寝て並び、
+/// 円形図では輪に沿って（一番内側の輪の上を）並ぶ
+public struct FoundationChainLink: Hashable, Sendable {
+    /// 根元（1目手前の側）
+    public var root: CGPoint
+    /// 頭（編み進む側）
+    public var head: CGPoint
+
+    public init(root: CGPoint, head: CGPoint) {
+        self.root = root
+        self.head = head
+    }
+}
+
 /// 図全体のレイアウト結果。保存せず、展開結果から毎回計算する（tech-spec 5-1）。
 ///
-/// 円形図（輪編み・螺旋編み）は `rings`、平面図（往復編み）は `bands` と `foundationChain` を持つ。目の座標の持ち方は共通
+/// 円形図（輪編み・螺旋編み）は `rings`、平面図（往復編み）は `bands` を持つ。目の座標の持ち方は共通
 public struct ChartLayout: Hashable, Sendable {
     /// すべての目（段の順、段の中は編む順）
     public var stitches: [LaidOutStitch]
@@ -110,8 +126,8 @@ public struct ChartLayout: Hashable, Sendable {
     public var rings: [RowRing]
     /// 段ごとの帯（平面図）
     public var bands: [RowBand]
-    /// 作り目の鎖の位置（平面図。鎖の作り目の n 目を編んだ順に）
-    public var foundationChain: [CGPoint]
+    /// 作り目の鎖の位置（編んだ順）。平面図では横一列、円形図では一番内側の輪に並ぶ
+    public var foundationChain: [FoundationChainLink]
     /// 図の中心（円形図は輪の中心、平面図は外接矩形の中心。画面に収めるときの基準）
     public var center: CGPoint
     /// 図全体を含む矩形（記号の余白込み）
@@ -126,7 +142,7 @@ public struct ChartLayout: Hashable, Sendable {
     }
 
     public init(
-        stitches: [LaidOutStitch], rings: [RowRing] = [], bands: [RowBand] = [], foundationChain: [CGPoint] = [],
+        stitches: [LaidOutStitch], rings: [RowRing] = [], bands: [RowBand] = [], foundationChain: [FoundationChainLink] = [],
         center: CGPoint, bounds: CGRect
     ) {
         self.stitches = stitches

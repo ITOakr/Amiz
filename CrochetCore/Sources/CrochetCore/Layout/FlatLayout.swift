@@ -38,21 +38,25 @@ public enum FlatLayout {
 
         // 作り目の鎖：x = 0, 1, 2, … に横一列（最初に編んだ鎖が左。1段目は右端から拾い始める）。
         // 1段目の根元は y = 0 で、鎖はその少し下に描く
-        var foundationChain: [CGPoint] = []
+        var foundationChain: [FoundationChainLink] = []
         /// 前段の「数える目」の頭の x（編んだ順）
         var previousXs: [Double] = []
         /// 前段の最後に編んだ目の x（この段の始まりの端）
         var previousEndX = 0.0
         if case .chain(let stitchCount) = pattern.foundation {
             for index in 0..<stitchCount {
-                foundationChain.append(CGPoint(x: CGFloat(index), y: options.foundationChainOffset))
+                // 鎖1目は左（根元）から右（頭）へ寝かせて描く
+                foundationChain.append(FoundationChainLink(
+                    root: CGPoint(x: CGFloat(index) - 1, y: options.foundationChainOffset),
+                    head: CGPoint(x: CGFloat(index), y: options.foundationChainOffset)
+                ))
                 previousXs.append(Double(index))
             }
             previousEndX = previousXs.last ?? 0
         }
         var baseY = 0.0
-        var minX: Double = foundationChain.first.map { Double($0.x) } ?? 0
-        var maxX: Double = foundationChain.last.map { Double($0.x) } ?? 0
+        var minX: Double = foundationChain.first.map { Double($0.head.x) } ?? 0
+        var maxX: Double = foundationChain.last.map { Double($0.head.x) } ?? 0
 
         for (rowIndex, row) in expansion.rows.enumerated() {
             // 1段目は右から左、以降は交互

@@ -3,8 +3,8 @@ import CrochetCore
 
 /// 新規作成（シート。ui-spec 4）。
 ///
-/// 作り目と編み方の組み合わせは、当面「わの作り目 × 輪編み／螺旋編み」と「鎖の作り目 × 往復編み」だけ
-/// （鎖を輪にして編み始める作品は AMIZ-36）。「最初の糸」はフェーズ9。
+/// 作り目と編み方の組み合わせは、「わの作り目 × 輪編み／螺旋編み」「鎖の作り目 × 往復編み」
+/// 「鎖を輪にする × 輪編み／螺旋編み」（AMIZ-75）。鎖を1目ずつ拾って輪に編む形は AMIZ-79。
 struct NewWorkSheet: View {
     /// 「作成」で呼ぶ。作った作品を渡す
     let onCreate: (Work) -> Void
@@ -15,6 +15,8 @@ struct NewWorkSheet: View {
     @State private var method: WorkingMethod = .joinedRounds
     /// 鎖の作り目の「1段目に編む目数」（domain-spec 33）
     @State private var stitchCountText = "20"
+    /// 鎖を輪にする作り目の「輪にする鎖の目数」（domain-spec 33）
+    @State private var ringChainCountText = "6"
     /// 最初の糸（ui-spec 4）
     @State private var yarnName = "生成り"
     @State private var yarnColor = Color(Yarn.fallback.color)
@@ -23,6 +25,8 @@ struct NewWorkSheet: View {
     private enum FoundationChoice: Hashable {
         case magicRing
         case chain
+        /// 鎖を輪にして、その中に1段目を編み入れる（domain-spec 33）
+        case chainRing
     }
 
     var body: some View {
@@ -36,6 +40,7 @@ struct NewWorkSheet: View {
                     Picker("作り目", selection: $foundation) {
                         Text("わの作り目").tag(FoundationChoice.magicRing)
                         Text("鎖の作り目").tag(FoundationChoice.chain)
+                        Text("鎖を輪にする").tag(FoundationChoice.chainRing)
                     }
                     .pickerStyle(.inline)
                     .labelsHidden()
@@ -50,11 +55,22 @@ struct NewWorkSheet: View {
                                 .accessibilityIdentifier("newWork.stitchCount")
                         }
                     }
+                    if foundation == .chainRing {
+                        HStack {
+                            Text("輪にする鎖の目数")
+                            Spacer()
+                            TextField("目数", text: $ringChainCountText)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 80)
+                                .accessibilityIdentifier("newWork.ringChainCount")
+                        }
+                    }
                 } header: {
                     Text("作り目")
                 } footer: {
-                    if foundation == .chain {
-                        Text(chainHint)
+                    if let hint = foundationHint {
+                        Text(hint)
                     }
                 }
                 Section {
@@ -68,8 +84,8 @@ struct NewWorkSheet: View {
                 } header: {
                     Text("編み方")
                 } footer: {
-                    if !Self.isAvailable(foundation: foundationKind, method: method) {
-                        Text("この組み合わせは今後対応します。鎖の作り目は往復編みと、わの作り目は輪編み・螺旋編みと組み合わせてください。")
+                    if let reason = unavailableReason {
+                        Text(reason)
                     }
                 }
                 Section {
@@ -101,11 +117,11 @@ struct NewWorkSheet: View {
                         onCreate(work)
                         dismiss()
                     }
-                    .disabled(!Self.isAvailable(foundation: foundationKind, method: method) || (foundation == .chain && stitchCount == nil))
+                    .disabled(unavailableReason != nil || countIsInvalid)
                     .accessibilityIdentifier("newWork.create")
                 }
             }
-            // 作り目を変えたら、合う編み方に切り替える（わ → 輪編み、鎖 → 往復編み）
+            // 作り目を変えたら、合う編み方に切り替える（わ・鎖を輪にする → 輪編み、鎖 → 往復編み）
             .onChange(of: foundation) { _, choice in
                 method = choice == .chain ? .flat : .joinedRounds
             }
@@ -118,17 +134,52 @@ struct NewWorkSheet: View {
         return count
     }
 
+    /// 入力中の「輪にする鎖の目数」（1 以上の整数でなければ nil）
+    private var ringChainCount: Int? {
+        guard let count = Int(ringChainCountText.trimmingCharacters(in: .whitespaces)), count >= 1 else { return nil }
+        return count
+    }
+
+    /// 目数の入力が足りているか
+    private var countIsInvalid: Bool {
+        (foundation == .chain && stitchCount == nil) || (foundation == .chainRing && ringChainCount == nil)
+    }
+
     private var foundationKind: FoundationKind {
         switch foundation {
         case .magicRing: .magicRing
         case .chain: .chain(stitchCount: stitchCount ?? 1)
+        case .chainRing: .chainRing(chainCount: ringChainCount ?? 1)
         }
     }
 
-    /// 「細編みなら鎖21目、長編みなら鎖22目」（domain-spec 33）
-    private var chainHint: String {
-        guard let count = stitchCount else { return "1以上の目数を入れてください。" }
-        return "実際に編む鎖は、細編みなら鎖\(count + 1)目、長編みなら鎖\(count + 2)目（立ち上がりを含む）。"
+    /// 作り目の説明（domain-spec 33）
+    private var foundationHint: String? {
+        switch foundation {
+        case .magicRing:
+            nil
+        case .chain:
+            if let count = stitchCount {
+                "実際に編む鎖は、細編みなら鎖\(count + 1)目、長編みなら鎖\(count + 2)目（立ち上がりを含む）。"
+            } else {
+                "1以上の目数を入れてください。"
+            }
+        case .chainRing:
+            if let count = ringChainCount {
+                "鎖\(count)目を輪にして、その中に1段目を編み入れます。1段目は何目でも編み入れられます。"
+            } else {
+                "1以上の目数を入れてください。"
+            }
+        }
+    }
+
+    /// 作れない組み合わせの理由（作れるなら nil）
+    private var unavailableReason: String? {
+        guard !Self.isAvailable(foundation: foundationKind, method: method) else { return nil }
+        if foundation == .chain, method != .flat {
+            return "鎖を1目ずつ拾って輪に編むのは今後対応します。鎖を輪にして中に編み入れるなら「鎖を輪にする」を選んでください。"
+        }
+        return "この組み合わせは今後対応します。わの作り目と鎖を輪にする作り目は輪編み・螺旋編みと、鎖の作り目は往復編みと組み合わせてください。"
     }
 }
 
@@ -136,7 +187,8 @@ extension NewWorkSheet {
     /// いま作れる作り目と編み方の組み合わせ
     static func isAvailable(foundation: FoundationKind, method: WorkingMethod) -> Bool {
         switch (foundation, method) {
-        case (.magicRing, .joinedRounds), (.magicRing, .spiral), (.chain, .flat): true
+        case (.magicRing, .joinedRounds), (.magicRing, .spiral), (.chain, .flat),
+             (.chainRing, .joinedRounds), (.chainRing, .spiral): true
         default: false
         }
     }

@@ -219,11 +219,12 @@ struct ChartPainter {
             }
         }
 
-        // 作り目の鎖（平面図）：横たわる鎖の楕円
-        for point in layout.foundationChain {
-            let head = transform.toScreen(point)
-            let root = CGPoint(x: head.x - transform.unit, y: head.y)
-            let path = StitchSymbol.strokePath(kind: .chain, from: root, to: head, style: style)
+        // 作り目の鎖：平面図では横に寝て並び、円形図（鎖を輪にした作り目）では一番内側の輪に沿って並ぶ
+        for link in layout.foundationChain {
+            let path = StitchSymbol.strokePath(
+                kind: .chain,
+                from: transform.toScreen(link.root), to: transform.toScreen(link.head), style: style
+            )
             context.stroke(path, with: .color(AppTheme.ink), lineWidth: style.lineWidth)
         }
 
