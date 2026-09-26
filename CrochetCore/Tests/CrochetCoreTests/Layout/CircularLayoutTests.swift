@@ -323,3 +323,99 @@ struct TrailingChainLayoutTests {
         }
     }
 }
+
+/// 鎖を輪にした作り目（domain-spec 33、tech-spec 8-1。AMIZ-77）
+@Suite("鎖を輪にした作り目のレイアウト")
+struct ChainRingLayoutTests {
+    private let twoPi = 2 * Double.pi
+
+    /// 角度の差を −π < d ≦ π に折り返す
+    private func wrapped(_ angle: Double) -> Double {
+        var value = angle.truncatingRemainder(dividingBy: twoPi)
+        if value < 0 { value += twoPi }
+        if value > Double.pi { value -= twoPi }
+        return value
+    }
+
+    private func sameAngle(_ a: Double, _ b: Double) -> Bool {
+        abs(wrapped(a - b)) < 1e-9
+    }
+
+    /// 段の数える目（数える目の順）
+    private func countedStitches(of layout: ChartLayout, row: Int) -> [LaidOutStitch] {
+        layout.stitches.filter { $0.rowIndex == row && $0.countedIndex != nil }
+    }
+
+    /// 鎖6目を輪にして、その中に1段目「立ち上がり鎖3目、長編み15目、引き抜き」＝16目
+    private func chainRingMotif(chainCount: Int = 6) -> Pattern {
+        Pattern(method: .joinedRounds, foundation: .chainRing(chainCount: chainCount), rows: [
+            Row(steps: [.turningChain(3)] + TestPatterns.stitches(.doubleCrochet, 15) + [.closeRound()]),
+        ])
+    }
+
+    @Test("輪にした鎖が一番内側の輪に等間隔で並ぶ")
+    func chainRingFoundation() {
+        let layout = chainRingMotif().circularLayout()
+        let hole = layout.rings[0].innerRadius
+
+        #expect(layout.foundationChain.count == 6)
+        // すべて穴の輪の上にある
+        for link in layout.foundationChain {
+            #expect(abs(hypot(link.head.x, link.head.y) - hole) < 1e-9)
+            #expect(abs(hypot(link.root.x, link.root.y) - hole) < 1e-9)
+        }
+        // 頭の角度が 1周 ÷ 6 ずつ増え、根元は1目手前にある
+        let headAngles = layout.foundationChain.map { atan2(-Double($0.head.y), Double($0.head.x)) }
+        for index in 0..<6 {
+            #expect(sameAngle(headAngles[index], Double(index) * twoPi / 6))
+        }
+        for link in layout.foundationChain {
+            let head = atan2(-Double(link.head.y), Double(link.head.x))
+            let root = atan2(-Double(link.root.y), Double(link.root.x))
+            #expect(abs(wrapped(head - root) - twoPi / 6) < 1e-9)
+        }
+    }
+
+    @Test("穴の半径は鎖の目数で決まり、わの作り目より小さくならない")
+    func chainRingHoleRadius() {
+        let options = CircularLayout.Options()
+        let magicRing = CircularLayout.holeRadius(for: .magicRing, options: options)
+
+        // 鎖6目：円周が 6 になる大きさ（≒0.955）。わの作り目（0.8）より大きい
+        let six = CircularLayout.holeRadius(for: .chainRing(chainCount: 6), options: options)
+        #expect(abs(six - 6 / twoPi) < 1e-9)
+        #expect(six > magicRing)
+
+        // 鎖が多いほど穴が大きい
+        #expect(CircularLayout.holeRadius(for: .chainRing(chainCount: 12), options: options) > six)
+
+        // 鎖が少なくても、わの作り目より小さくはしない
+        #expect(CircularLayout.holeRadius(for: .chainRing(chainCount: 3), options: options) == magicRing)
+
+        // 鎖の作り目（往復編み）と わの作り目は今までどおり
+        #expect(CircularLayout.holeRadius(for: .chain(stitchCount: 20), options: options) == magicRing)
+    }
+
+    @Test("1段目は穴の外側に並び、根元は輪の上にある")
+    func chainRingFirstRow() {
+        let layout = chainRingMotif().circularLayout()
+        let hole = layout.rings[0].innerRadius
+        let row1 = countedStitches(of: layout, row: 0)
+
+        #expect(row1.count == 16)
+        for stitch in row1 {
+            // 頭は穴より外
+            #expect(hypot(stitch.head.x, stitch.head.y) > hole)
+            // 根元は輪のすぐ外（束に編み入れるので、輪から少し離して目ごとに並べる。domain-spec 11）
+            #expect(stitch.bases.count == 1)
+            let gap = CircularLayout.Options().chainRingBaseGap
+            #expect(abs(hypot(stitch.bases[0].x, stitch.bases[0].y) - (hole + gap)) < 1e-9)
+        }
+        // 根元が1点に集まっていない
+        #expect(Set(row1.map { "\($0.bases[0].x),\($0.bases[0].y)" }).count == 16)
+    }
+
+    @Test("わの作り目では作り目の鎖を描かない")
+    func magicRingHasNoFoundationChain() {
+        #expect(TestPatterns.tc1().circularLayout().foundationChain.isEmpty)
+    }}

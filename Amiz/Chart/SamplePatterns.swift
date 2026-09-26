@@ -54,6 +54,28 @@ enum SamplePatterns {
         ])
     }
 
+    /// 「鎖の輪のモチーフ」：鎖6目を輪にして、1段目は輪の中に長編み16目、
+    /// 2段目は（長編み1目、鎖2目）の繰り返し、3段目は鎖のアーチに束で細編み3目（domain-spec 33）
+    static var chainRingMotif: Pattern {
+        func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {
+            (0..<count).map { _ in .stitch(kind) }
+        }
+        return Pattern(method: .joinedRounds, foundation: .chainRing(chainCount: 6), rows: [
+            Row(steps: [.turningChain(3)] + stitches(.doubleCrochet, 15) + [.closeRound()]),
+            Row(steps: [
+                .turningChain(3), .stitch(.chain), .stitch(.chain),
+                .untilEnd([.stitch(.doubleCrochet), .stitch(.chain), .stitch(.chain)]),
+                .closeRound(),
+            ]),
+            Row(steps: [
+                .turningChain(1),
+                .untilEnd([.increase(.singleCrochet, count: 3, into: .chainSpace)]),
+                .closeRound(),
+            ]),
+            Row(),
+        ])
+    }
+
     /// 「うさぎの胴体」：螺旋編み 12 段（domain-spec TC-8）。12段目まで完成し、13段目を入力中
     static var rabbitBody: Pattern {
         func stitches(_ kind: StitchKind, _ count: Int) -> [Step] {

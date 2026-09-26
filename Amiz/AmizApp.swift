@@ -40,6 +40,8 @@ struct AmizApp: App {
             NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.bearHeadColored), title: "くまの頭（色付き）") }
         case "motif":
             NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.flowerMotif), title: "花のモチーフ") }
+        case "chainring":
+            NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.chainRingMotif), title: "鎖の輪のモチーフ") }
         case "blanket":
             NavigationStack { EditorView(model: EditorModel(pattern: SamplePatterns.blanketEdge), title: "ブランケットの縁") }
         case "rabbit":
