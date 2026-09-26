@@ -11,8 +11,8 @@ struct PatternEditorTests {
     }
 
     @Test("TC-2 影響範囲：1段目が6目から7目に変わり、2〜5段目に影響がある")
-    func tc2Impact() {
-        let impact = PatternEditor.impact(of: tc2Edit, on: TestPatterns.tc1())
+    func tc2Impact() throws {
+        let impact = try #require(PatternEditor.impact(of: tc2Edit, on: TestPatterns.tc1()))
 
         #expect(impact.editedRowNumber == 1)
         #expect(impact.countBefore == 6)
@@ -23,7 +23,7 @@ struct PatternEditorTests {
     }
 
     @Test("TC-2 「上の段を残す」：各段は 7/14/18/24/24 になり、3段目に警告が出る")
-    func tc2Keep() {
+    func tc2Keep() throws {
         let original = TestPatterns.tc1()
         let edited = PatternEditor.applyKeepingRowsAbove(tc2Edit, to: original)
         let expansion = edited.expanded()
@@ -37,7 +37,7 @@ struct PatternEditorTests {
     }
 
     @Test("TC-2 「上の段をほどく」：1段目（7目）だけが残る")
-    func tc2Unravel() {
+    func tc2Unravel() throws {
         let edited = PatternEditor.applyUnravelingRowsAbove(tc2Edit, to: TestPatterns.tc1())
 
         #expect(edited.rows.count == 1)
@@ -46,7 +46,7 @@ struct PatternEditorTests {
     }
 
     @Test("TC-5 拾う目数が変わらない修正：3段目を中長編みにしても影響なし")
-    func tc5() {
+    func tc5() throws {
         let original = TestPatterns.tc1()
         let edit = RowEdit.replace(rowIndex: 2, with: Row(steps: [
             .turningChain(1),
@@ -54,7 +54,7 @@ struct PatternEditorTests {
             .closeRound(),
         ]))
 
-        let impact = PatternEditor.impact(of: edit, on: original)
+        let impact = try #require(PatternEditor.impact(of: edit, on: original))
         #expect(impact.countBefore == 18)
         #expect(impact.countAfter == 18)
         #expect(impact.affectedRowNumbers == nil)
@@ -67,11 +67,11 @@ struct PatternEditorTests {
     }
 
     @Test("最後の段の修正は目数が変わっても確認不要")
-    func lastRowReplace() {
+    func lastRowReplace() throws {
         let edit = RowEdit.replace(rowIndex: 4, with: Row(steps: [
             .turningChain(1), .untilEnd([.increase(.singleCrochet)]), .closeRound(),
         ]))
-        let impact = PatternEditor.impact(of: edit, on: TestPatterns.tc1())
+        let impact = try #require(PatternEditor.impact(of: edit, on: TestPatterns.tc1()))
 
         #expect(impact.countBefore == 24)
         #expect(impact.countAfter == 48)
@@ -79,11 +79,11 @@ struct PatternEditorTests {
     }
 
     @Test("段の削除：上に段があれば確認が必要。残すと上の段はそのまま、ほどくと消える")
-    func delete() {
+    func delete() throws {
         let original = TestPatterns.tc1()
         let edit = RowEdit.delete(rowIndex: 1)
 
-        let impact = PatternEditor.impact(of: edit, on: original)
+        let impact = try #require(PatternEditor.impact(of: edit, on: original))
         #expect(impact.affectedRowNumbers == 3...5)
         #expect(impact.countBefore == nil)
 
@@ -94,15 +94,15 @@ struct PatternEditorTests {
         #expect(unraveled.rows.map(\.id) == [original.rows[0].id])
 
         // 最後の段の削除は確認不要
-        #expect(!PatternEditor.impact(of: .delete(rowIndex: 4), on: original).needsConfirmation)
+        #expect(try #require(PatternEditor.impact(of: .delete(rowIndex: 4), on: original)).needsConfirmation == false)
     }
 
     @Test("段の複製：最後の段を5回複製すると「増減なし」の段が5段増える")
-    func duplicateLastRow() {
+    func duplicateLastRow() throws {
         let original = TestPatterns.tc1()
         let edit = RowEdit.duplicate(rowIndex: 4, times: 5)
 
-        #expect(!PatternEditor.impact(of: edit, on: original).needsConfirmation)
+        #expect(try #require(PatternEditor.impact(of: edit, on: original)).needsConfirmation == false)
 
         let edited = PatternEditor.applyKeepingRowsAbove(edit, to: original)
         #expect(edited.rows.count == 10)
@@ -119,11 +119,11 @@ struct PatternEditorTests {
     }
 
     @Test("段の複製：途中の段を複製すると上の段に影響があり、確認が必要")
-    func duplicateMiddleRow() {
+    func duplicateMiddleRow() throws {
         let original = TestPatterns.tc1()
         let edit = RowEdit.duplicate(rowIndex: 1, times: 1)
 
-        let impact = PatternEditor.impact(of: edit, on: original)
+        let impact = try #require(PatternEditor.impact(of: edit, on: original))
         #expect(impact.affectedRowNumbers == 3...5)
         #expect(impact.affectedRowsDescription == "3〜5段目")
 
@@ -136,28 +136,28 @@ struct PatternEditorTests {
     }
 
     @Test("影響範囲が1段だけのときの表記")
-    func singleAffectedRow() {
+    func singleAffectedRow() throws {
         let pattern = TestPatterns.afterRound(of: 6, row: Row(
             steps: [.turningChain(1)] + TestPatterns.stitches(.singleCrochet, 6) + [.closeRound()]
         ))
         let edit = RowEdit.replace(rowIndex: 0, with: Row(
             steps: [.turningChain(1)] + TestPatterns.stitches(.singleCrochet, 5) + [.closeRound()]
         ))
-        #expect(PatternEditor.impact(of: edit, on: pattern).affectedRowsDescription == "2段目")
+        #expect(try #require(PatternEditor.impact(of: edit, on: pattern)).affectedRowsDescription == "2段目")
     }
 
     @Test("影響範囲は目のある段まで。末尾の空の段（入力を始めていない段）は含めない")
-    func trailingEmptyRowIsNotAffected() {
+    func trailingEmptyRowIsNotAffected() throws {
         var pattern = TestPatterns.tc1()
         pattern.rows.append(Row())  // 入力中の空の6段目
         let edit = RowEdit.replace(rowIndex: 0, with: Row(
             steps: [.turningChain(1)] + TestPatterns.stitches(.singleCrochet, 7) + [.closeRound()]
         ))
-        #expect(PatternEditor.impact(of: edit, on: pattern).affectedRowNumbers == 2...5)
+        #expect(try #require(PatternEditor.impact(of: edit, on: pattern)).affectedRowNumbers == 2...5)
 
         // 空の段しか上にないなら影響なし
         var single = Pattern(method: .joinedRounds, foundation: .magicRing, rows: [pattern.rows[0], Row()])
-        #expect(!PatternEditor.impact(of: edit, on: single).needsConfirmation)
+        #expect(try #require(PatternEditor.impact(of: edit, on: single)).needsConfirmation == false)
         single.rows[0] = edit_row(edit)
         #expect(single.rows.count == 2)
     }
@@ -168,7 +168,7 @@ struct PatternEditorTests {
     }
 
     @Test("ほどいた後：最後の段が閉じていれば空の段を足す")
-    func ensureOpenRow() {
+    func ensureOpenRow() throws {
         var pattern = PatternEditor.applyUnravelingRowsAbove(.delete(rowIndex: 2), to: TestPatterns.tc1())
         #expect(pattern.rows.count == 2)
         #expect(PatternInput.ensureOpenRow(in: &pattern))
@@ -176,5 +176,40 @@ struct PatternEditorTests {
         #expect(pattern.rows[2].steps.isEmpty)
         // すでに空の段があれば足さない
         #expect(!PatternInput.ensureOpenRow(in: &pattern))
+    }
+}
+
+/// 範囲外の段を指しても落ちない（AMIZ-73）
+@Suite("段の編集：範囲外の位置")
+struct PatternEditorSafetyTests {
+    @Test("範囲外の段は nil を返し、適用しても編み図が変わらない")
+    func outOfRange() throws {
+        let pattern = TestPatterns.tc1()
+        for edit: RowEdit in [.replace(rowIndex: 9, with: Row()), .delete(rowIndex: -1), .duplicate(rowIndex: 99, times: 2)] {
+            #expect(PatternEditor.impact(of: edit, on: pattern) == nil)
+            #expect(PatternEditor.applyKeepingRowsAbove(edit, to: pattern) == pattern)
+            #expect(PatternEditor.applyUnravelingRowsAbove(edit, to: pattern) == pattern)
+        }
+        // 正しい位置なら今までどおり
+        #expect(PatternEditor.impact(of: .delete(rowIndex: 0), on: pattern) != nil)
+    }
+
+    @Test("目数表：段数と展開結果が食い違っていたら空を返す（落ちない）")
+    func mismatchedExpansion() throws {
+        let pattern = TestPatterns.tc1()
+        let short = PatternExpansion(rows: Array(pattern.expanded().rows.prefix(2)))
+        #expect(StitchTableFormatter.tableRows(for: pattern, expansion: short).isEmpty)
+        #expect(StitchTableFormatter.tableRows(for: pattern, expansion: pattern.expanded()).count == 5)
+    }
+
+    @Test("末尾の空の段を落とす処理は段数をそろえる")
+    func trimming() throws {
+        var pattern = TestPatterns.tc1()
+        pattern.rows.append(Row())
+        pattern.rows.append(Row())
+        let trimmed = pattern.trimmingTrailingEmptyRows(expansion: pattern.expanded())
+        #expect(trimmed.pattern.rows.count == 5)
+        #expect(trimmed.expansion.rows.count == 5)
+        #expect(StitchTableFormatter.tableRows(for: trimmed.pattern, expansion: trimmed.expansion).count == 5)
     }
 }

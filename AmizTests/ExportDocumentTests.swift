@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 import CrochetCore
 @testable import Amiz
@@ -100,5 +101,34 @@ struct ExportDocumentTests {
         let document = ExportDocument(title: "", pattern: SamplePatterns.bearHead, options: ExportOptions())
         #expect(document.warnings.map(\.rowNumber) == [5])
         #expect(document.confirmationMessage == "目数が合っていない段があります（5段目）。このまま書き出しますか？")
+    }
+}
+
+/// 書き出しのファイル名（AMIZ-73）
+@Suite("書き出しのファイル名")
+@MainActor
+struct ExportFileNameTests {
+    @Test("使えない文字は置き換え、先頭の点と長すぎる名前を避ける")
+    func safeFileName() {
+        #expect(ExportRenderer.safeFileName(from: "くまの頭") == "くまの頭")
+        #expect(ExportRenderer.safeFileName(from: "赤/青の帽子") == "赤-青の帽子")
+        #expect(ExportRenderer.safeFileName(from: "../../秘密") == "秘密")
+        #expect(ExportRenderer.safeFileName(from: "..") == "編み図")
+        #expect(ExportRenderer.safeFileName(from: ".隠し") == "隠し")
+        #expect(ExportRenderer.safeFileName(from: "   ") == "編み図")
+        #expect(ExportRenderer.safeFileName(from: "改行\nあり") == "改行-あり")
+        #expect(ExportRenderer.safeFileName(from: String(repeating: "あ", count: 300)).count == 60)
+        #expect(ExportRenderer.outputURL(title: "赤/青", format: .pdf).lastPathComponent == "赤-青.pdf")
+    }
+
+    @Test("変な名前でも書き出せる")
+    func exportsWithOddTitle() throws {
+        var options = ExportOptions()
+        options.includesTable = false
+        let document = ExportDocument(title: "../*?:危険", pattern: SamplePatterns.bearHead, options: options)
+        let url = try ExportRenderer.export(document)
+        #expect(FileManager.default.fileExists(atPath: url.path))
+        #expect(url.path.contains("tmp"))
+        try? FileManager.default.removeItem(at: url)
     }
 }

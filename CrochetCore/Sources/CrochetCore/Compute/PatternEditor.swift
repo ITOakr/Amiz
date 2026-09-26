@@ -55,10 +55,10 @@ public struct EditImpact: Hashable, Sendable {
 /// ここでは「影響があるか」の判定と、「上の段を残す」「上の段をほどく」の適用だけを行い、
 /// 警告の計算は `ConsistencyChecker` に任せる。
 public enum PatternEditor {
-    /// 編集の影響を調べる。編み図は変更しない
-    public static func impact(of edit: RowEdit, on pattern: Pattern) -> EditImpact {
+    /// 編集の影響を調べる。編み図は変更しない。段の位置が範囲外なら nil（落とさない。AMIZ-73）
+    public static func impact(of edit: RowEdit, on pattern: Pattern) -> EditImpact? {
         let index = edit.rowIndex
-        precondition(pattern.rows.indices.contains(index), "段の位置が範囲外です: \(index)")
+        guard pattern.rows.indices.contains(index) else { return nil }
 
         // 上の段：編集した段より後ろで、目のある段まで（末尾の空の段＝入力を始めていない段は影響を受けない）
         let lastNonEmpty = pattern.rows.lastIndex { !$0.steps.isEmpty } ?? -1
@@ -87,7 +87,8 @@ public enum PatternEditor {
     public static func applyKeepingRowsAbove(_ edit: RowEdit, to pattern: Pattern) -> Pattern {
         var result = pattern
         let index = edit.rowIndex
-        precondition(result.rows.indices.contains(index), "段の位置が範囲外です: \(index)")
+        // 段の位置が範囲外なら何もしない（落とさない。AMIZ-73）
+        guard result.rows.indices.contains(index) else { return pattern }
 
         switch edit {
         case .replace(_, let newRow):
@@ -105,7 +106,7 @@ public enum PatternEditor {
     public static func applyUnravelingRowsAbove(_ edit: RowEdit, to pattern: Pattern) -> Pattern {
         var result = pattern
         let index = edit.rowIndex
-        precondition(result.rows.indices.contains(index), "段の位置が範囲外です: \(index)")
+        guard result.rows.indices.contains(index) else { return pattern }
 
         // 先に上の段を落としてから編集を適用する
         result.rows.removeSubrange((index + 1)...)

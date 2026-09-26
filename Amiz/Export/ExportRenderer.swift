@@ -16,10 +16,21 @@ enum ExportRenderer {
 
     /// 書き出したファイルの置き場所（一時フォルダ）。共有が終われば消えてよい
     static func outputURL(title: String, format: ExportOptions.Format) -> URL {
-        let safeName = title.replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespaces)
-        let base = safeName.isEmpty ? "編み図" : safeName
         let ext = format == .pdf ? "pdf" : "png"
-        return FileManager.default.temporaryDirectory.appending(path: "\(base).\(ext)")
+        return FileManager.default.temporaryDirectory.appending(path: "\(safeFileName(from: title)).\(ext)")
+    }
+
+    /// 作品名からファイル名を作る（AMIZ-73）。
+    /// 使えない文字を `-` に置き換え、先頭の `.`（隠しファイル）を避け、長すぎる名前を切り詰める
+    static func safeFileName(from title: String) -> String {
+        let forbidden = CharacterSet(charactersIn: "/\\:?%*|\"<>").union(.controlCharacters).union(.newlines)
+        var name = title.components(separatedBy: forbidden).joined(separator: "-")
+        // 「..」は上の階層を指す書き方なので残さない
+        while name.contains("..") { name = name.replacingOccurrences(of: "..", with: "-") }
+        // 先頭の点（隠しファイル）と、置き換えでできた先頭の「-」や空白を落とす
+        name = name.trimmingCharacters(in: CharacterSet(charactersIn: ".-").union(.whitespaces))
+        if name.count > 60 { name = String(name.prefix(60)) }
+        return name.isEmpty ? "編み図" : name
     }
 
     /// 設定に応じて PDF か PNG を書き出し、ファイルの URL を返す
