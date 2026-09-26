@@ -31,11 +31,11 @@ final class ColorEditUITests: XCTestCase {
         snapshot(app, name: "color-1-palette")
 
         // 目数表で2段目をタップ → 段全体がこげ茶 → 文に糸名
-        app.buttons["目数表"].tap()
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
         let row2 = app.buttons["table.row.2"]
         XCTAssertTrue(row2.waitForExistence(timeout: 3))
         row2.tap()
-        XCTAssertTrue(app.staticTexts["こげ茶で細編み2目編み入れる×全目"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.waitForTableText("こげ茶で細編み2目編み入れる×全目"))
         XCTAssertTrue(app.staticTexts["メインで（細編み1目、細編み2目編み入れる）×6"].exists)
         snapshot(app, name: "color-2-table")
 

@@ -44,8 +44,8 @@ final class SpiralUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["3段目・この段 0目"].waitForExistence(timeout: 2))
 
         // 目数表
-        app.buttons["目数表"].tap()
-        XCTAssertTrue(app.staticTexts["わの作り目に細編み6目"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
+        XCTAssertTrue(app.waitForTableText("わの作り目に細編み6目"))
         XCTAssertTrue(app.staticTexts["細編み2目編み入れる×全目"].exists)
         XCTAssertTrue(app.staticTexts["12目"].exists)
         snapshot(app, name: "spiral-2-table")

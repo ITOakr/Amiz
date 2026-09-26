@@ -65,8 +65,8 @@ final class ClusterPicotUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["3段目・この段 12目"].waitForExistence(timeout: 3))  // ピコットは数えない
 
         // 目数表
-        app.buttons["目数表"].tap()
-        XCTAssertTrue(app.staticTexts["立ち上がり鎖2目、（鎖1目、中長編み3目の玉編み）×11、鎖1目"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
+        XCTAssertTrue(app.waitForTableText("立ち上がり鎖2目、（鎖1目、中長編み3目の玉編み）×11、鎖1目"))
         XCTAssertTrue(app.staticTexts["合計24目／鎖抜き12目"].exists)
         snapshot(app, name: "cluster-2-table")
     }

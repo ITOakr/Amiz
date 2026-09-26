@@ -42,7 +42,7 @@ final class TurningChainSettingUITests: XCTestCase {
         // 目数表に注記が出る
         for _ in 0..<5 { singleCrochet.tap() }
         app.buttons["op.finishRow"].tap()
-        app.buttons["目数表"].tap()
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
         XCTAssertTrue(app.staticTexts["わの作り目に立ち上がり鎖1目（1目と数える）、細編み6目"].waitForExistence(timeout: 2))
         snapshot(app, name: "tc-3-table")
     }

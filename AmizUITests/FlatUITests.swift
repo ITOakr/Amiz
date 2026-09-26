@@ -46,8 +46,8 @@ final class FlatUITests: XCTestCase {
         app.buttons["op.finishRow"].tap()
 
         // 目数表：作り目の行に鎖21目
-        app.buttons["目数表"].tap()
-        XCTAssertTrue(app.staticTexts["作り目：鎖21目"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
+        XCTAssertTrue(app.waitForTableText("作り目：鎖21目"))
         XCTAssertTrue(app.staticTexts["作り目に細編み20目"].exists)
         XCTAssertTrue(app.staticTexts["立ち上がり鎖3目、長編み1目、残りの目すべてに長編み"].exists)
         snapshot(app, name: "flat-3-table")

@@ -322,6 +322,7 @@
 - **アプリ本体**：SwiftUI のプレビューとシミュレーターでの手動確認を中心にする。UI の自動テストは最小限にする
   - UI テストターゲット（AmizUITests）は通常のテスト実行（共有スキーム `Amiz`）からは外し、別の共有スキーム `AmizUITests` で必要なときだけ走らせる。起動時間が長く、毎回のタスクで走らせる価値が薄いため
   - UI テストは「ボタンを押すとモデルが動き、画面に反映される」ことを確かめる最小のもの（1〜2本）にとどめる。ボタンには `accessibilityIdentifier`（`stitch.singleCrochet`、`op.finishRow` など）を付けて指す
+  - 目数表を読むときは決まった回数のスワイプに頼らず、`AmizUITests/TableAssertions.swift` の `openStitchTable()` / `waitForTableText(_:)` / `waitForTableRow(_:)` で「見えるまで待つ・たどる」（スクロール量や描き直しのタイミングが変わると落ちるため。AMIZ-74）
 - 1つのタスクの完了条件は「ビルドが通り、すべてのテストが通ること」
 
 ## 12. コードの書き方
