@@ -150,7 +150,7 @@ public enum CircularLayout {
 
     // MARK: - 頭の角度
 
-    /// 数える目の頭の角度と、同じ根元を共有する目の数を決める
+    /// 数える目の頭の角度と、同じ根元を共有する目の数を決める（並べ方の本体は `StitchPlacement`）
     /// - Parameters:
     ///   - followsBases: true なら入力中の段として前段の真上に置く。false なら終わった段として等間隔に並べる
     private static func headAngles(
@@ -160,21 +160,8 @@ public enum CircularLayout {
         let count = counted.count
         guard count > 0 else { return ([], []) }
 
-        // 同じ編み入れ先を共有する続きの目（増し目）のまとまりの大きさ
-        var groupSizes = [Int](repeating: 1, count: count)
-        var groupStart = 0
-        while groupStart < count {
-            var end = groupStart
-            if !baseAngles[groupStart].isEmpty {
-                while end + 1 < count, counted[end + 1].picks == counted[groupStart].picks, !baseAngles[end + 1].isEmpty {
-                    end += 1
-                }
-            }
-            for stitchIndex in groupStart...end {
-                groupSizes[stitchIndex] = end - groupStart + 1
-            }
-            groupStart = end + 1
-        }
+        let groupSizes = StitchPlacement.groupSizes(for: counted, bases: baseAngles)
+        let options = placementOptions(previousStep: previousStep)
 
         // 1段目（わの作り目）：等間隔に1周
         if rowIndex == 0 {
@@ -183,75 +170,29 @@ public enum CircularLayout {
 
         // 終わった段：等間隔に1周。回転量は頭と根元のずれの平均が 0 になるように
         if !followsBases {
-            let step = (2 * Double.pi) / Double(count)
-            var offsets: [Double] = []
-            for (index, bases) in baseAngles.enumerated() where !bases.isEmpty {
-                offsets.append(meanAngle(bases) - step * Double(index))
-            }
-            let rotation = offsets.isEmpty ? (previousFirstHead ?? 0) : meanAngle(offsets)
-            return ((0..<count).map { rotation + step * Double($0) }, groupSizes)
+            let angles = StitchPlacement.evenlySpaced(
+                bases: baseAngles, step: (2 * Double.pi) / Double(count),
+                fallbackOffset: previousFirstHead ?? 0, mean: meanAngle
+            )
+            return (angles, groupSizes)
         }
 
-        var angles = [Double?](repeating: nil, count: count)
-
-        // 入力中の段：根元のある目は、まとまりごとに前段の1目分の幅の中で均等に広げる
-        var index = 0
-        while index < count {
-            guard !baseAngles[index].isEmpty else {
-                index += 1
-                continue
-            }
-            let groupSize = groupSizes[index]
-            let end = index + groupSize - 1
-            let base = meanAngle(baseAngles[index])
-            for (position, stitchIndex) in (index...end).enumerated() {
-                angles[stitchIndex] = base + previousStep * ((Double(position) + 0.5) / Double(groupSize) - 0.5)
-            }
-            index = end + 1
-        }
-
-        // 根元のない目（鎖）：前後の根元のある目の間に均等に並べる
-        index = 0
-        while index < count {
-            guard angles[index] == nil else {
-                index += 1
-                continue
-            }
-            var end = index
-            while end + 1 < count, angles[end + 1] == nil {
-                end += 1
-            }
-            let runLength = end - index + 1
-            let before = index > 0 ? angles[index - 1] : nil
-            let after = end + 1 < count ? angles[end + 1] : nil
-            let (start, finish): (Double, Double)
-            switch (before, after) {
-            case (let b?, let a?):
-                start = b
-                finish = a
-            case (let b?, nil):
-                // 段の終わり：閉じた段なら最初の目まで均等に。入力中なら鎖1つにつき前段の1目分ずつ先へ
-                // （1目分に詰めると、アーチの鎖を入力している途中で記号が重なる。AMIZ-58）
-                start = b
-                if isClosed, let first = angles.first ?? nil {
-                    finish = first + 2 * Double.pi
-                } else {
-                    finish = b + previousStep * Double(runLength + 1)
-                }
-            case (nil, let a?):
-                start = a - previousStep
-                finish = a
-            case (nil, nil):
-                start = -previousStep / 2
-                finish = start + previousStep * Double(runLength)
-            }
-            for (position, stitchIndex) in (index...end).enumerated() {
-                angles[stitchIndex] = start + (finish - start) * (Double(position) + 1) / Double(runLength + 1)
-            }
-            index = end + 1
-        }
-
+        // 入力中の段：根元のある目は前段の真上、鎖は前後の目の間に
+        var angles = StitchPlacement.followingBases(bases: baseAngles, groupSizes: groupSizes, options: options)
+        StitchPlacement.fillRunsWithoutBase(&angles, isClosed: isClosed, options: options)
         return (angles.map { $0 ?? 0 }, groupSizes)
+    }
+
+    /// 円形図での並べ方（角度。1周は 2π）
+    private static func placementOptions(previousStep: Double) -> StitchPlacement.Options {
+        StitchPlacement.Options(
+            previousStep: previousStep,
+            mean: meanAngle,
+            trailingStep: previousStep,
+            leadingSpan: { _ in previousStep },
+            closedWrap: 2 * Double.pi,
+            fallbackStart: -previousStep / 2
+        )
     }
 
     // MARK: - 補助
@@ -282,19 +223,9 @@ public enum CircularLayout {
         )
     }
 
-    /// 描くときの長さ（鎖○目分）。立ち上がりは鎖の目数、高さのない目は最小の長さ
+    /// 描くときの長さ（鎖○目分）
     static func drawHeight(of stitch: ExpandedStitch, options: Options) -> Double {
-        switch stitch.role {
-        case .turningChain(let chains):
-            Double(chains)
-        case .closingSlipStitch:
-            options.lowStitchHeight
-        case .picot:
-            // ピコットは段の高さに含めない（段の外に描く）
-            0
-        case .regular:
-            stitch.kind.heightInChains == 0 ? options.lowStitchHeight : Double(stitch.kind.heightInChains)
-        }
+        stitch.drawHeight(lowStitchHeight: options.lowStitchHeight)
     }
 
     /// 前段の目の頭の角度。拾いすぎで前段の範囲を超えたら、同じ間隔で回り続けたとみなす
