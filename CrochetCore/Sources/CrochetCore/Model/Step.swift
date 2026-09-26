@@ -167,6 +167,22 @@ extension Step: Codable {
         case repeatGroup = "repeat"
     }
 
+    /// 読み込んだ数が決めた範囲に入っているか確かめる。外れていれば読み込みエラーにする（壊れたデータで落ちないように）
+    private static func validate(
+        _ value: Int, _ range: ClosedRange<Int>, _ key: CodingKeys, in container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> Int {
+        guard range.contains(value) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: key, in: container,
+                debugDescription: "\(key.stringValue) は \(range.lowerBound)〜\(range.upperBound) の範囲で保存されます（読み込んだ値：\(value)）"
+            )
+        }
+        return value
+    }
+
+    /// 1つの操作で扱える目数の上限（画面からは 3〜5 までしか入らないが、手で書いたデータも読めるよう緩めにする）
+    private static let countLimit = 99
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let id = try container.decode(UUID.self, forKey: .id)
@@ -174,7 +190,7 @@ extension Step: Codable {
 
         switch try container.decode(TypeName.self, forKey: .type) {
         case .turningChain:
-            let chains = try container.decode(Int.self, forKey: .chains)
+            let chains = try Step.validate(try container.decode(Int.self, forKey: .chains), 1...Step.countLimit, .chains, in: container)
             kind = .turningChain(
                 chains: chains,
                 counted: try container.decodeIfPresent(Bool.self, forKey: .counted) ?? StepKind.standardTurningChainCounted(chains: chains)
@@ -187,22 +203,22 @@ extension Step: Codable {
         case .increase:
             kind = .increase(
                 try container.decode(StitchKind.self, forKey: .stitch),
-                count: try container.decode(Int.self, forKey: .count),
+                count: try Step.validate(try container.decode(Int.self, forKey: .count), 2...Step.countLimit, .count, in: container),
                 into: try container.decodeIfPresent(Placement.self, forKey: .into) ?? .stitch
             )
         case .decrease:
             kind = .decrease(
                 try container.decode(StitchKind.self, forKey: .stitch),
-                count: try container.decode(Int.self, forKey: .count)
+                count: try Step.validate(try container.decode(Int.self, forKey: .count), 2...Step.countLimit, .count, in: container)
             )
         case .cluster:
             kind = .cluster(
                 try container.decode(StitchKind.self, forKey: .stitch),
-                count: try container.decode(Int.self, forKey: .count),
+                count: try Step.validate(try container.decode(Int.self, forKey: .count), 2...Step.countLimit, .count, in: container),
                 into: try container.decodeIfPresent(Placement.self, forKey: .into) ?? .stitch
             )
         case .picot:
-            kind = .picot(chains: try container.decode(Int.self, forKey: .chains))
+            kind = .picot(chains: try Step.validate(try container.decode(Int.self, forKey: .chains), 1...Step.countLimit, .chains, in: container))
         case .skip:
             kind = .skip
         case .leaveRemaining:
@@ -271,6 +287,11 @@ extension RepeatCount: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let times = try? container.decode(Int.self) {
+            guard times >= 0 else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: decoder.codingPath, debugDescription: "繰り返しの回数は 0 以上で保存されます（読み込んだ値：\(times)）")
+                )
+            }
             self = .times(times)
         } else if try container.decode(String.self) == Self.untilEndValue {
             self = .untilEnd
