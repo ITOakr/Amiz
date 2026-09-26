@@ -85,7 +85,7 @@
 | `Pattern` | 編み図全体。`schemaVersion`、編み方、作り目、段の配列、糸リスト（`yarns`）、今持っている糸（`currentYarnID`）。`yarn(for:)` で糸 ID から糸を引く（nil・削除済みは既定の糸）。`jsonData()` / `init(jsonData:)` で JSON と変換 | 5-4、6章、domain 27、29 |
 | `Yarn` / `YarnColor` | 糸（id・名前・表示色・メモ）と表示色（RGB。JSON では "#RRGGBB"。明るい色の判定 `isLight`） | domain 29、30 |
 | `WorkingMethod` | 編み方：`flat`（往復編み）／`joinedRounds`（輪編み）／`spiral`（螺旋編み） | domain 5 |
-| `FoundationKind` | 作り目：`magicRing`／`chain(stitchCount:)`。値は「1段目に編む目数」 | domain 33 |
+| `FoundationKind` | 作り目：`magicRing`／`chain(stitchCount:)`（値は「1段目に編む目数」）／`chainRing(chainCount:)`（値は「輪にする鎖の目数」） | domain 33 |
 | `Row` | 段。`id` と手順 `steps` | domain 21 |
 | `Step` | 手順の1操作。`id`、`kind`、糸（`yarnID`。nil は既定の糸） | domain 21、27 |
 | `StepKind` | 操作の種類：`turningChain`／`stitch`／`increase`／`decrease`／`cluster`（玉編み）／`picot`／`skip`／`leaveRemaining`／`closeRound`／`repeatGroup` | domain 2、3、21 |
@@ -214,6 +214,7 @@
 - 編み図データに `schemaVersion` を持たせる
 - 将来データ構造を変えたとき（玉編みの追加など）に、古いデータを読み込めるようにするため
 - 履歴：1＝初期形式。2＝糸リスト（`yarns`）・今持っている糸（`currentYarnID`）・操作の糸（`yarn`）を追加（フェーズ9）。読み込みは「無いキーは既定値」で行い、書き出しは常に今の形式で行う（形式1のデータは糸なしとして読め、保存すると形式2になる）
+- **種類を増やすだけの追加では上げない**：操作の種類（玉編み・ピコット）や作り目の種類（鎖を輪にする）を足しても、前の形式のデータはそのまま読めるのでバージョンは上げない。上げるのは、キーの意味が変わる・無くなるなど、前の形式を読むのに変換が要るときだけ
 
 ---
 

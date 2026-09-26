@@ -52,7 +52,8 @@ public enum Expander {
     /// 1段目の「前段の目数」（domain-spec 33）
     static func initialPreviousCount(for foundation: FoundationKind) -> Int? {
         switch foundation {
-        case .magicRing: nil
+        // わの作り目・鎖を輪にした作り目は、1段目を何目でも編み入れられる（整合性チェックの対象外）
+        case .magicRing, .chainRing: nil
         case .chain(let stitchCount): stitchCount
         }
     }
