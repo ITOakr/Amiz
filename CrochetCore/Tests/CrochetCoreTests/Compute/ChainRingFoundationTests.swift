@@ -90,7 +90,8 @@ struct ChainRingFoundationTests {
         #expect(StitchTableFormatter.foundationChainCount(for: pattern) == nil)
 
         let instruction = StitchTableFormatter.instruction(for: pattern.rows[0], rowIndex: 0, in: pattern)
-        #expect(instruction.hasPrefix("鎖の輪の中に"))
+        // 目数表は数える立ち上がりも項目として書く
+        #expect(instruction == "鎖の輪の中に立ち上がり鎖3目、長編み15目")
     }
 
     @Test("作り目の日本語名")
