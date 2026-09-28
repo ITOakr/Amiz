@@ -140,7 +140,7 @@ extension TutorialStep {
         TutorialStep(
             id: "table",
             message: "「目数表」を見てみましょう。段ごとの目数と手順が、文章でも出ます。",
-            target: "editor.tableTab"
+            target: "editor.tabs"
         ) { $0.showsTable },
 
         TutorialStep(

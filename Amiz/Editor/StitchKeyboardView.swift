@@ -91,6 +91,7 @@ struct StitchKeyboardView: View {
                 }
                 .buttonStyle(.soft)
                 .accessibilityIdentifier("stitch.\(kind.rawValue)")
+                .tutorialTarget("stitch.\(kind.rawValue)")
             }
         }
     }
@@ -108,6 +109,7 @@ struct StitchKeyboardView: View {
                 model.toggleIncrease()
             }
             .accessibilityIdentifier("modifier.increase")
+            .tutorialTarget("modifier.increase")
             ModifierButton(
                 title: "減らし目", detail: selectedCountText(for: .decrease),
                 spokenTitle: "\(selectedCount(for: .decrease) ?? 2)目一度", isSelected: isDecreaseSelected
@@ -133,6 +135,7 @@ struct StitchKeyboardView: View {
                 model.toggleUntilEnd()
             }
             .accessibilityIdentifier("modifier.untilEnd")
+            .tutorialTarget("modifier.untilEnd")
         }
     }
 
@@ -218,18 +221,21 @@ struct StitchKeyboardView: View {
                 }
                 .disabled(model.isRepeating)
                 .accessibilityIdentifier("op.beginRepeat")
+                .tutorialTarget("op.beginRepeat")
 
                 OperationButton(title: "繰り返し終了") {
                     isRepeatEndPresented = true
                 }
                 .disabled(!(model.pendingRepeatUnit?.isEmpty == false))
                 .accessibilityIdentifier("op.endRepeat")
+                .tutorialTarget("op.endRepeat")
 
                 OperationButton(title: "段を終える") {
                     finishRow()
                 }
                 .disabled(model.editingSession != nil)
                 .accessibilityIdentifier("op.finishRow")
+                .tutorialTarget("op.finishRow")
             }
         }
     }
