@@ -125,6 +125,8 @@ struct ChartView: View {
             }
         }
         .font(.caption)
+        // 図の上に浮かぶボタンなので、大きくしすぎて図を覆わないようにする（AMIZ-81）
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .buttonStyle(.bordered)
         .padding(8)
         .accessibilityIdentifier("chart.fit")
