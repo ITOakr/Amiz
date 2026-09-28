@@ -28,6 +28,15 @@ struct SettingsView: View {
                 Toggle("図に段番号を表示", isOn: $showsRowNumbers)
                     .accessibilityIdentifier("settings.showsRowNumbers")
             }
+            Section {
+                // 記号の見本（AMIZ-82）
+                NavigationLink("記号の一覧") {
+                    StitchSymbolCatalogView()
+                }
+                .accessibilityIdentifier("settings.symbolCatalog")
+            } footer: {
+                Text("図に出てくる記号と、その組み合わせの見本です。")
+            }
         }
         .navigationTitle("設定")
         .navigationBarTitleDisplayMode(.inline)

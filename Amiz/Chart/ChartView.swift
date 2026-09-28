@@ -50,12 +50,15 @@ struct ChartView: View {
                     onTapStitch?(stitch)
                 }
             }
+            // 識別子と読み上げの名前は図そのもの（Canvas）に付ける。外側に付けると、
+            // 重ねた「全体」ボタンを飲み込んで1つの要素になってしまう（AMIZ-87）
+            .accessibilityIdentifier("chart")
+            .accessibilityLabel("編み図")
             .overlay(alignment: .bottomTrailing) {
                 fitButton
             }
         }
         .background(AppTheme.canvas)
-        .accessibilityIdentifier("chart")
     }
 
     // MARK: - 描画

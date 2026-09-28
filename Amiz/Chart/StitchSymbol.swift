@@ -324,17 +324,28 @@ struct StitchSymbolView: View {
 /// すべての記号を並べたプレビュー（フェーズ3-2 の確認用）
 struct StitchSymbolCatalogView: View {
     var body: some View {
+        ScrollView {
+            content
+                .padding()
+        }
+        .navigationTitle("記号の一覧")
+        .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("symbolCatalog")
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("記号一覧").font(.headline)
-            HStack(spacing: 16) {
+            section("目の種類", detail: "ボタンの記号と同じものが、図にも描かれます。")
+            // 文字を大きくしても崩れないよう、折り返す並びにする
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 12)], spacing: 12) {
                 ForEach(StitchKind.allCases, id: \.self) { kind in
-                    VStack {
+                    VStack(spacing: 4) {
                         StitchSymbolView(kind: kind, size: 40)
                         Text(kind.japaneseName).font(.caption2)
                     }
                 }
             }
-            Text("組み合わせ").font(.headline)
+            section("組み合わせ", detail: "増し目は根元を合わせたV字、減らし目は頭で集まる逆V字、立ち上がりは鎖の目数ぶん。")
             Canvas { context, size in
                 let style = StitchSymbol.Style(unit: 28, lineWidth: 1.8)
                 let baseline = size.height * 0.85
@@ -366,7 +377,7 @@ struct StitchSymbolCatalogView: View {
                 }
             }
             .frame(height: 150)
-            Text("玉編みとピコット").font(.headline)
+            section("玉編みとピコット", detail: "玉編みは根元から脚が開いて上でまとまる形。ピコットは目の頭に付く小さな輪。")
             Canvas { context, size in
                 let style = StitchSymbol.Style(unit: 28, lineWidth: 1.8)
                 let baseline = size.height * 0.85
@@ -395,7 +406,14 @@ struct StitchSymbolCatalogView: View {
             }
             .frame(height: 150)
         }
-        .padding()
+    }
+
+    /// 見出しと短い説明
+    private func section(_ title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.headline)
+            Text(detail).font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
 
