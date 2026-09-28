@@ -27,6 +27,8 @@ struct EditorView: View {
     @AppStorage(AppSettings.turningChainCountingKey) private var turningChainCounting = TurningChainCounting.standard
     /// 図／目数表の切り替え
     @State private var tab: Tab = .chart
+    /// 使い方の案内（ui-spec 7-5）
+    @Environment(TutorialModel.self) private var tutorial
     /// 書き出しシート（ui-spec 6-2）
     @State private var showsExportSheet = false
     /// 糸リスト（ui-spec 6-1）
@@ -69,6 +71,9 @@ struct EditorView: View {
         .background(AppTheme.canvas)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        // 案内の進行（ui-spec 7-5）。編み図と画面の状態が変わるたびに渡す
+        .onAppear { tutorial.update(tutorialState) }
+        .onChange(of: tutorialState) { _, state in tutorial.update(state) }
         .alert("修正の確認", isPresented: isConfirmationPresented) {
             Button("上の段を残す") { model.resolveConfirmation(keepingRowsAbove: true) }
             Button("上の段をほどく", role: .destructive) { model.resolveConfirmation(keepingRowsAbove: false) }
@@ -299,6 +304,12 @@ struct EditorView: View {
         .pickerStyle(.segmented)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+        .tutorialTarget("editor.tabs")
+    }
+
+    /// 案内に渡す今の状態
+    private var tutorialState: TutorialState {
+        TutorialState(screen: .editor, model: model, showsTable: tab == .table)
     }
 
     private var chart: some View {

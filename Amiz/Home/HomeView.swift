@@ -20,6 +20,10 @@ struct HomeView: View {
     /// 保存先を開けなかったときの説明（AMIZ-69）。帯で出し、閉じられる
     @Environment(\.storeWarning) private var storeWarning
     @State private var hasDismissedStoreWarning = false
+    /// 使い方の案内（ui-spec 7-5）
+    @Environment(TutorialModel.self) private var tutorial
+    /// 初回に出す「使い方を見ますか？」
+    @State private var isTutorialOfferPresented = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -47,6 +51,7 @@ struct HomeView: View {
                         isNewWorkPresented = true
                     }
                     .accessibilityIdentifier("home.new")
+                    .tutorialTarget("home.new")
                 }
             }
             .navigationDestination(for: Work.self) { work in
@@ -57,6 +62,20 @@ struct HomeView: View {
                 case .settings:
                     SettingsView()
                 }
+            }
+            .onAppear {
+                tutorial.update(TutorialState(screen: .home))
+                if tutorial.shouldOfferAutomatically(hasWorks: !works.isEmpty) {
+                    isTutorialOfferPresented = true
+                }
+            }
+            // 初回だけ出す案内のおすすめ（ui-spec 7-5）
+            .alert("使い方を見ますか？", isPresented: $isTutorialOfferPresented) {
+                Button("使い方を見る") { tutorial.start() }
+                    .accessibilityIdentifier("tutorial.accept")
+                Button("あとで", role: .cancel) { tutorial.skip() }
+            } message: {
+                Text("わ編みのコースターを一緒に作りながら、基本の操作を案内します。3分ほどで終わります。")
             }
             .sheet(isPresented: $isNewWorkPresented) {
                 NewWorkSheet { work in
@@ -91,6 +110,8 @@ struct HomeView: View {
                 Text("「\(deletingWork?.name ?? "")」の編み図が消えます。元に戻せません。")
             }
         }
+        // 案内のハイライトと説明の帯。ホームから編集画面まで同じ重ね合わせが続く（ui-spec 7-5）
+        .tutorialOverlay(tutorial)
     }
 
     // MARK: - カードのメニュー（ui-spec 3）

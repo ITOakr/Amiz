@@ -44,6 +44,22 @@ final class TutorialModel {
         defaults.bool(forKey: Self.completedKey)
     }
 
+    /// 初回の案内を自動で出すか（ui-spec 7-5）。
+    ///
+    /// UI テストでは既定で出さない（多くのテストが案内を邪魔に感じるため）。
+    /// 案内そのものを試すテストは `--tutorial` を渡して出す
+    func shouldOfferAutomatically(hasWorks: Bool, arguments: [String] = ProcessInfo.processInfo.arguments) -> Bool {
+        if arguments.contains("--tutorial") { return true }
+        if arguments.contains("--ui-testing") { return false }
+        return !hasWorks && !hasCompleted
+    }
+
+    /// UI テストのために、見たことの記録を消す（`--reset-store` と一緒に使う）
+    static func resetIfNeeded(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) {
+        guard arguments.contains("--reset-store") || arguments.contains("--tutorial") else { return }
+        defaults.removeObject(forKey: completedKey)
+    }
+
     /// 案内を始める
     func start() {
         stepIndex = 0

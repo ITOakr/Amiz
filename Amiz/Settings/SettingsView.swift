@@ -2,6 +2,9 @@ import SwiftUI
 
 /// 設定（ui-spec 6-3）。値は UserDefaults に保存する（tech-spec 5-5）。
 struct SettingsView: View {
+    /// 使い方の案内（ui-spec 7-5）
+    @Environment(TutorialModel.self) private var tutorial
+    @Environment(\.dismiss) private var dismiss
     @AppStorage(AppSettings.autoTurningChainKey) private var autoTurningChain = true
     @AppStorage(AppSettings.showsRowNumbersKey) private var showsRowNumbers = true
     @AppStorage(AppSettings.turningChainCountingKey) private var turningChainCounting = TurningChainCounting.standard
@@ -36,6 +39,15 @@ struct SettingsView: View {
                 .accessibilityIdentifier("settings.symbolCatalog")
             } footer: {
                 Text("図に出てくる記号と、その組み合わせの見本です。")
+            }
+            Section {
+                Button("使い方をもう一度見る") {
+                    tutorial.start()
+                    dismiss()
+                }
+                .accessibilityIdentifier("settings.tutorial")
+            } footer: {
+                Text("わ編みのコースターを一緒に作りながら、基本の操作を案内します。")
             }
         }
         .navigationTitle("設定")
