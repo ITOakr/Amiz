@@ -178,11 +178,22 @@ struct EditorView: View {
                 StitchTableView(model: model)
             }
             Divider()
+            controlStrip(isLarge: false)
+        }
+    }
+
+    /// 操作する部分（現在の段・操作バー・編み目キーボード）。
+    ///
+    /// 文字サイズの上限を付ける（AMIZ-81）。アクセシビリティの文字サイズでは、ここが縦に伸びて
+    /// 画面を占領し、編み図が見えなくなっていた。編み図と目数表（読むもの）は今までどおり大きくなる
+    private func controlStrip(isLarge: Bool) -> some View {
+        VStack(spacing: 0) {
             CurrentRowView(model: model)
             Divider()
             contextBar
-            keyboardOrPalette(isLarge: false)
+            keyboardOrPalette(isLarge: isLarge)
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     /// 編み目キーボード（D）。色編集モード中は糸パレットに切り替わる（ui-spec U21）
@@ -207,10 +218,7 @@ struct EditorView: View {
             }
             Divider()
             VStack(spacing: 0) {
-                CurrentRowView(model: model)
-                Divider()
-                contextBar
-                keyboardOrPalette(isLarge: true)
+                controlStrip(isLarge: true)
                 Spacer(minLength: 0)
             }
             .frame(width: 392)
@@ -317,6 +325,8 @@ struct EditorView: View {
                 Text("次に拾う目")
             }
             .font(.caption2)
+            // 図の上に浮かぶ札なので、大きくしすぎて図を覆わないようにする（AMIZ-81）
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(.regularMaterial, in: Capsule())
