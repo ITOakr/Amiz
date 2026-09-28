@@ -99,29 +99,61 @@ struct StitchKeyboardView: View {
 
     private var modifierGroup: some View {
         HStack(spacing: 10) {
-            ModifierButton(title: increaseTitle, isSelected: isIncreaseSelected) {
+            // ボタン名は短くして幅を揃え、選んだ目数は下の小さい行に出す（AMIZ-80）。
+            // 読み上げ（VoiceOver）には今までどおりの言い方を渡す
+            ModifierButton(
+                title: "増し目", detail: selectedCountText(for: .increase),
+                spokenTitle: "\(selectedCount(for: .increase) ?? 2)目編み入れる", isSelected: isIncreaseSelected
+            ) {
                 model.toggleIncrease()
             }
             .accessibilityIdentifier("modifier.increase")
-            ModifierButton(title: decreaseTitle, isSelected: isDecreaseSelected) {
+            ModifierButton(
+                title: "減らし目", detail: selectedCountText(for: .decrease),
+                spokenTitle: "\(selectedCount(for: .decrease) ?? 2)目一度", isSelected: isDecreaseSelected
+            ) {
                 model.toggleDecrease()
             }
             .accessibilityIdentifier("modifier.decrease")
             // 玉編み（domain-spec 2）。押すたびに 3→4→5→2→解除。中長・長・長々を押したときだけ効く
-            ModifierButton(title: clusterTitle, isSelected: isClusterSelected) {
+            ModifierButton(
+                title: "玉編み", detail: selectedCountText(for: .cluster),
+                spokenTitle: selectedCount(for: .cluster).map { "\($0)目の玉編み" } ?? "玉編み",
+                isSelected: isClusterSelected
+            ) {
                 model.toggleCluster()
             }
             .accessibilityIdentifier("modifier.cluster")
-            // 束に編み入れる（鎖のアーチをすくう。domain-spec 21）。「2目一度」とは同時に選べない
-            ModifierButton(title: "束に", isSelected: model.modifier.chainSpace) {
+            // 束に編み入れる（鎖のアーチをすくう。domain-spec 21）。「減らし目」とは同時に選べない
+            ModifierButton(title: "束に", spokenTitle: "束に編み入れる", isSelected: model.modifier.chainSpace) {
                 model.toggleChainSpace()
             }
             .accessibilityIdentifier("modifier.chainSpace")
-            ModifierButton(title: "残りすべてに", isSelected: model.modifier.untilEnd) {
+            ModifierButton(title: "全目に", spokenTitle: "残りすべての目に", isSelected: model.modifier.untilEnd) {
                 model.toggleUntilEnd()
             }
             .accessibilityIdentifier("modifier.untilEnd")
         }
+    }
+
+    /// 先に選ぶボタンの種類（目数の取り出しに使う）
+    private enum ModifierSlot {
+        case increase, decrease, cluster
+    }
+
+    /// 選んでいる目数（選んでいなければ nil）
+    private func selectedCount(for slot: ModifierSlot) -> Int? {
+        switch (slot, model.modifier.group) {
+        case (.increase, .increase(let count)), (.decrease, .decrease(let count)), (.cluster, .cluster(let count)):
+            count
+        default:
+            nil
+        }
+    }
+
+    /// ボタンの下に出す目数（「2目」）
+    private func selectedCountText(for slot: ModifierSlot) -> String? {
+        selectedCount(for: slot).map { "\($0)目" }
     }
 
     private var isIncreaseSelected: Bool {
@@ -132,20 +164,8 @@ struct StitchKeyboardView: View {
         if case .decrease = model.modifier.group { true } else { false }
     }
 
-    private var increaseTitle: String {
-        if case .increase(let count) = model.modifier.group { "\(count)目編み入れる" } else { "2目編み入れる" }
-    }
-
-    private var decreaseTitle: String {
-        if case .decrease(let count) = model.modifier.group { "\(count)目一度" } else { "2目一度" }
-    }
-
     private var isClusterSelected: Bool {
         if case .cluster = model.modifier.group { true } else { false }
-    }
-
-    private var clusterTitle: String {
-        if case .cluster(let count) = model.modifier.group { "\(count)目の玉編み" } else { "玉編み" }
     }
 
     // MARK: - グループ3：段の操作（2行。ui-spec 5-6）
@@ -227,20 +247,33 @@ struct StitchKeyboardView: View {
 
 /// 先に選ぶボタン。選択中は色を付けて状態 S2 を示す
 private struct ModifierButton: View {
+    /// ボタンに出す短い名前（幅を揃えるため、どれも3〜4文字にする。AMIZ-80）
     let title: String
+    /// 選んでいる目数（「2目」）。選んでいないときは nil
+    var detail: String?
+    /// 読み上げ（VoiceOver）で使う言い方。省略すると `title` をそのまま読む
+    var spokenTitle: String?
     let isSelected: Bool
     let action: () -> Void
     @Environment(\.keyboardButtonHeight) private var height
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity, minHeight: height)
+            VStack(spacing: 1) {
+                Text(title)
+                    .font(.caption)
+                if let detail {
+                    Text(detail)
+                        .font(.caption2)
+                        .opacity(0.75)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity, minHeight: height)
         }
         .buttonStyle(.soft(selected: isSelected))
+        .accessibilityLabel(spokenTitle ?? title)
     }
 }
 
