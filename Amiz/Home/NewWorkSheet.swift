@@ -10,6 +10,8 @@ struct NewWorkSheet: View {
     let onCreate: (Work) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    /// 使い方の案内（ui-spec 7-5）。案内中は作品名を用意しておく
+    @Environment(TutorialModel.self) private var tutorial
     @State private var name = ""
     @State private var foundation: FoundationChoice = .magicRing
     @State private var method: WorkingMethod = .joinedRounds
@@ -119,12 +121,21 @@ struct NewWorkSheet: View {
                     }
                     .disabled(unavailableReason != nil || countIsInvalid)
                     .accessibilityIdentifier("newWork.create")
+                    .tutorialTarget("newWork.create")
                 }
             }
             // 作り目を変えたら、合う編み方に切り替える（わ・鎖を輪にする → 輪編み、鎖 → 往復編み）
             .onChange(of: foundation) { _, choice in
                 method = choice == .chain ? .flat : .joinedRounds
             }
+            .onAppear {
+                tutorial.update(TutorialState(screen: .newWork))
+                if tutorial.isActive, name.isEmpty {
+                    name = "コースター（練習）"
+                }
+            }
+            // シートの中は別の重ね合わせになるので、ここにも置く
+            .tutorialOverlay(tutorial)
         }
     }
 

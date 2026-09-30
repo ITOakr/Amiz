@@ -13,12 +13,20 @@ import CrochetCore
 struct AmizApp: App {
     /// 作品の保存先（`WorkStore` が開く。開けなければ退避して作り直す。AMIZ-69）
     private let store = WorkStore.open()
+    /// 使い方の案内（ui-spec 7-5。画面をまたいで進むので、ここで1つ持つ）
+    @State private var tutorial = TutorialModel()
+
+    init() {
+        // UI テストで案内を最初から試せるようにする
+        TutorialModel.resetIfNeeded()
+    }
 
     var body: some Scene {
         WindowGroup {
             root
                 // 保存先を開けなかったときの説明（開けていれば何も出ない）
                 .environment(\.storeWarning, store.warning)
+                .environment(tutorial)
                 // 数字・英字を丸みのある書体に（ui-spec 1章。日本語はヒラギノのまま）
                 .fontDesign(.rounded)
         }
