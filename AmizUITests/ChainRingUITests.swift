@@ -52,9 +52,9 @@ final class ChainRingUITests: XCTestCase {
         ).firstMatch.exists)
     }
 
-    /// 鎖の作り目（1目ずつ拾う）と輪編みの組み合わせは、まだ作れない（AMIZ-79）
+    /// 鎖を輪にして、鎖を1目ずつ拾う筒状の編み始め（AMIZ-79）
     @MainActor
-    func testChainFoundationWithRoundsIsNotAvailableYet() {
+    func testCreateTubeWithChainFoundationInRounds() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--reset-store"]
         app.launch()
@@ -62,12 +62,47 @@ final class ChainRingUITests: XCTestCase {
         let newButton = app.buttons["home.newFromEmpty"]
         XCTAssertTrue(newButton.waitForExistence(timeout: 5))
         newButton.tap()
-        XCTAssertTrue(app.buttons["鎖の作り目"].waitForExistence(timeout: 2))
+        let nameField = app.textFields["newWork.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 2))
+        nameField.tap()
+        nameField.typeText("帽子の編み始め")
+
+        // 鎖の作り目を選ぶと往復編みに切り替わるので、輪編みに戻す
         app.buttons["鎖の作り目"].tap()
-        // 鎖の作り目では往復編みに切り替わるので、輪編みに戻す
+        let countField = app.textFields["newWork.stitchCount"]
+        XCTAssertTrue(countField.waitForExistence(timeout: 2))
+        countField.tap()
+        countField.press(forDuration: 1.0)
+        if app.menuItems["すべてを選択"].waitForExistence(timeout: 1) {
+            app.menuItems["すべてを選択"].tap()
+        }
+        countField.typeText("12")
         app.buttons["輪編み"].tap()
 
-        XCTAssertTrue(app.staticTexts["鎖を1目ずつ拾って輪に編むのは今後対応します。鎖を輪にして中に編み入れるなら「鎖を輪にする」を選んでください。"].exists)
-        XCTAssertFalse(app.buttons["newWork.create"].isEnabled)
+        // 作れる組み合わせになっている
+        XCTAssertTrue(app.staticTexts["鎖12目を輪にして、その鎖を1目ずつ拾って筒状に編みます。"].waitForExistence(timeout: 2))
+        let createButton = app.buttons["newWork.create"]
+        XCTAssertTrue(createButton.isEnabled)
+        createButton.tap()
+
+        // 編集画面：副題が「輪編み・鎖の作り目」
+        let singleCrochet = app.buttons["stitch.singleCrochet"]
+        XCTAssertTrue(singleCrochet.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["輪編み・鎖の作り目"].exists)
+
+        // 1段目：作り目の鎖を1目ずつ拾って細編み12目（立ち上がり鎖1目は数えない）
+        for _ in 0..<12 { singleCrochet.tap() }
+        XCTAssertTrue(app.staticTexts["1段目・この段 12目"].waitForExistence(timeout: 2))
+        // 前段（作り目の鎖）12目をちょうど拾い切っている
+        XCTAssertTrue(app.staticTexts["12/12"].exists, "前段から拾った目が 12/12 になる")
+        app.buttons["op.finishRow"].tap()
+        XCTAssertTrue(app.staticTexts["2段目・この段 0目"].waitForExistence(timeout: 2))
+
+        // 目数表：作り目の行は「鎖12目を輪にする」。警告は出ない
+        XCTAssertTrue(app.openStitchTable(), "目数表が開く")
+        XCTAssertTrue(app.waitForTableText("作り目：鎖12目を輪にする"), "作り目の行が出る")
+        XCTAssertFalse(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "しか拾っていません")
+        ).firstMatch.exists)
     }
 }

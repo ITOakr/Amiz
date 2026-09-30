@@ -171,7 +171,9 @@ struct NewWorkSheet: View {
             nil
         case .chain:
             if let count = stitchCount {
-                "実際に編む鎖は、細編みなら鎖\(count + 1)目、長編みなら鎖\(count + 2)目（立ち上がりを含む）。"
+                method == .flat
+                    ? "実際に編む鎖は、細編みなら鎖\(count + 1)目、長編みなら鎖\(count + 2)目（立ち上がりを含む）。"
+                    : "鎖\(count)目を輪にして、その鎖を1目ずつ拾って筒状に編みます。"
             } else {
                 "1以上の目数を入れてください。"
             }
@@ -187,10 +189,7 @@ struct NewWorkSheet: View {
     /// 作れない組み合わせの理由（作れるなら nil）
     private var unavailableReason: String? {
         guard !Self.isAvailable(foundation: foundationKind, method: method) else { return nil }
-        if foundation == .chain, method != .flat {
-            return "鎖を1目ずつ拾って輪に編むのは今後対応します。鎖を輪にして中に編み入れるなら「鎖を輪にする」を選んでください。"
-        }
-        return "この組み合わせは今後対応します。わの作り目と鎖を輪にする作り目は輪編み・螺旋編みと、鎖の作り目は往復編みと組み合わせてください。"
+        return "この組み合わせは今後対応します。わの作り目は輪編み・螺旋編みと、鎖を輪にする作り目は輪編み・螺旋編みと組み合わせてください。"
     }
 }
 
@@ -198,7 +197,8 @@ extension NewWorkSheet {
     /// いま作れる作り目と編み方の組み合わせ
     static func isAvailable(foundation: FoundationKind, method: WorkingMethod) -> Bool {
         switch (foundation, method) {
-        case (.magicRing, .joinedRounds), (.magicRing, .spiral), (.chain, .flat),
+        case (.magicRing, .joinedRounds), (.magicRing, .spiral),
+             (.chain, .flat), (.chain, .joinedRounds), (.chain, .spiral),
              (.chainRing, .joinedRounds), (.chainRing, .spiral): true
         default: false
         }

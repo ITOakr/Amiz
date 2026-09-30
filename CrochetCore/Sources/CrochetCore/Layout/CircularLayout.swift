@@ -46,8 +46,16 @@ public enum CircularLayout {
         let isChainRing = if case .chainRing = pattern.foundation { true } else { false }
         /// 前段の「数える目」の頭の角度（数える目の順）
         var previousHeadAngles: [Double] = []
+        // 鎖の作り目を輪にして1目ずつ拾う場合（domain-spec 33）、作り目の鎖そのものが
+        // 1段目の「前段」になる。輪の上に並べた鎖の角度を最初の前段として渡す
+        if case .chain(let stitchCount) = pattern.foundation {
+            let step = (2 * Double.pi) / Double(max(stitchCount, 1))
+            previousHeadAngles = (0..<stitchCount).map { Double($0) * step }
+        }
 
         for (rowIndex, row) in expansion.rows.enumerated() {
+            // 拾える前段があるか（1段目でも、鎖を輪にして拾う場合は作り目が前段になる）
+            let hasPreviousRow = !previousHeadAngles.isEmpty
             let rowHeight = max(options.minRowHeight, row.stitches.map { drawHeight(of: $0, options: options) }.max() ?? 0)
             let outerRadius = innerRadius + rowHeight
             let counted = row.stitches.enumerated().filter { $0.element.isCounted }
@@ -60,7 +68,7 @@ public enum CircularLayout {
             // 数える目ごとの根元の角度（拾った前段の目の頭の角度。鎖などは空）。
             // 束に編み入れた目は、拾ったアーチ（鎖のまとまり）の中央に根元を1つ置く（domain-spec 11）
             let baseAngles: [[Double]] = counted.map { _, stitch in
-                guard rowIndex > 0, !stitch.picks.isEmpty else { return [] }
+                guard hasPreviousRow, !stitch.picks.isEmpty else { return [] }
                 let angles = stitch.picks.map { previousAngle(at: $0, in: previousHeadAngles) }
                 return stitch.into == .chainSpace ? [meanAngle(angles)] : angles
             }
@@ -68,7 +76,7 @@ public enum CircularLayout {
             let isClosed = row.stitches.contains { $0.role == .closingSlipStitch }
             let isLastRow = rowIndex == expansion.rows.count - 1
             let (headAngles, groupSizes) = headAngles(
-                for: counted.map(\.element), baseAngles: baseAngles, rowIndex: rowIndex,
+                for: counted.map(\.element), baseAngles: baseAngles, hasPreviousRow: hasPreviousRow,
                 previousStep: previousStep, isClosed: isClosed,
                 followsBases: isLastRow && !isClosed, previousFirstHead: previousHeadAngles.first
             )
@@ -90,8 +98,8 @@ public enum CircularLayout {
                     lastCountedIndex = countedIndex
                     let headAngle = headAngles[countedIndex]
                     let bases: [CGPoint]
-                    if rowIndex == 0 {
-                        // 作り目：根元は輪の上、頭と同じ角度。
+                    if !hasPreviousRow {
+                        // 拾う前段がない作り目（わ・鎖を輪にして束に）：根元は輪の上、頭と同じ角度。
                         // 鎖を輪にした作り目は輪の中に束に編み入れるので、根元を輪から少し離す（domain-spec 11）
                         let gap = isChainRing ? options.chainRingBaseGap : 0
                         bases = [point(center: center, radius: innerRadius + gap, angle: headAngle)]
@@ -166,7 +174,7 @@ public enum CircularLayout {
     /// - Parameters:
     ///   - followsBases: true なら入力中の段として前段の真上に置く。false なら終わった段として等間隔に並べる
     private static func headAngles(
-        for counted: [ExpandedStitch], baseAngles: [[Double]], rowIndex: Int,
+        for counted: [ExpandedStitch], baseAngles: [[Double]], hasPreviousRow: Bool,
         previousStep: Double, isClosed: Bool, followsBases: Bool, previousFirstHead: Double?
     ) -> (angles: [Double], groupSizes: [Int]) {
         let count = counted.count
@@ -175,8 +183,8 @@ public enum CircularLayout {
         let groupSizes = StitchPlacement.groupSizes(for: counted, bases: baseAngles)
         let options = placementOptions(previousStep: previousStep)
 
-        // 1段目（わの作り目）：等間隔に1周
-        if rowIndex == 0 {
+        // 拾う前段がない1段目（わの作り目・鎖を輪にして束に）：等間隔に1周
+        if !hasPreviousRow {
             return ((0..<count).map { previousStep * Double($0) }, groupSizes)
         }
 
@@ -239,9 +247,10 @@ public enum CircularLayout {
     /// わの作り目より小さくはしない
     static func holeRadius(for foundation: FoundationKind, options: Options) -> Double {
         switch foundation {
-        case .chainRing(let chainCount):
+        // 円形図では、鎖の作り目は輪にして編み始める（domain-spec 33）ので、どちらも鎖の数で決める
+        case .chainRing(let chainCount), .chain(let chainCount):
             max(options.ringRadius, Double(chainCount) / (2 * Double.pi))
-        case .magicRing, .chain:
+        case .magicRing:
             options.ringRadius
         }
     }
@@ -250,7 +259,13 @@ public enum CircularLayout {
     static func foundationChain(
         for foundation: FoundationKind, center: CGPoint, radius: Double
     ) -> [FoundationChainLink] {
-        guard case .chainRing(let chainCount) = foundation else { return [] }
+        let chainCount: Int
+        switch foundation {
+        case .chainRing(let count), .chain(let count):
+            chainCount = count
+        case .magicRing:
+            return []
+        }
         let step = (2 * Double.pi) / Double(max(chainCount, 1))
         return (0..<chainCount).map { index in
             let head = Double(index) * step
