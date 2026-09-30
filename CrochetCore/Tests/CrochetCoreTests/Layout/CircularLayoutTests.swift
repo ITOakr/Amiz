@@ -392,8 +392,10 @@ struct ChainRingLayoutTests {
         // 鎖が少なくても、わの作り目より小さくはしない
         #expect(CircularLayout.holeRadius(for: .chainRing(chainCount: 3), options: options) == magicRing)
 
-        // 鎖の作り目（往復編み）と わの作り目は今までどおり
-        #expect(CircularLayout.holeRadius(for: .chain(stitchCount: 20), options: options) == magicRing)
+        // 鎖の作り目も、円形図では輪にして編み始めるので鎖の数で決まる（AMIZ-79）。
+        // 往復編みの平面図はこの計算を使わない
+        #expect(CircularLayout.holeRadius(for: .chain(stitchCount: 20), options: options) == 20 / twoPi)
+        #expect(CircularLayout.holeRadius(for: .magicRing, options: options) == magicRing)
     }
 
     @Test("1段目は穴の外側に並び、根元は輪の上にある")

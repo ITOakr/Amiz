@@ -95,16 +95,24 @@ public enum StitchTableFormatter {
         case .magicRing:
             "わの作り目"
         case .chain:
-            "作り目：鎖\(foundationChainCount(for: pattern) ?? 0)目"
+            pattern.method == .flat
+                ? "作り目：鎖\(foundationChainCount(for: pattern) ?? 0)目"
+                : "作り目：鎖\(foundationChainCount(for: pattern) ?? 0)目を輪にする"
         case .chainRing(let chainCount):
             "作り目：鎖\(chainCount)目を輪にする"
         }
     }
 
-    /// 鎖の作り目で実際に編む鎖の目数：n ＋ 1段目の立ち上がりの鎖の目数 −（1目と数えるなら 1）。
-    /// 立ち上がりが決まる前は細編みの段（鎖1目）として仮に計算する。わの作り目では nil
+    /// 鎖の作り目で実際に編む鎖の目数（domain-spec 33）。わの作り目では nil
+    ///
+    /// - 往復編み：n ＋ 1段目の立ち上がりの鎖の目数 −（1目と数えるなら 1）。
+    ///   立ち上がりの鎖は作り目の端に続けて編むので、作り目に含まれる。
+    ///   立ち上がりが決まる前は細編みの段（鎖1目）として仮に計算する
+    /// - 輪編み・螺旋編み（鎖を輪にして1目ずつ拾う）：n 目ちょうど。
+    ///   鎖を輪にしてから立ち上がりを編むので、立ち上がりは作り目に含まれない
     public static func foundationChainCount(for pattern: Pattern) -> Int? {
         guard case .chain(let stitchCount) = pattern.foundation else { return nil }
+        guard pattern.method == .flat else { return stitchCount }
         var chains = 1
         var counted = false
         if case .turningChain(let firstRowChains, let firstRowCounted) = pattern.rows.first?.steps.first?.kind {
